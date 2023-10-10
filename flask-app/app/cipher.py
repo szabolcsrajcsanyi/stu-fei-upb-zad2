@@ -48,10 +48,30 @@ def encrypt(plaintext):
     return cipher_text, secret_key_encrypted, iv_encrypted
 
 
-# TODO: decrypt
-def decrypt():
-    pass
+def decrypt(cipher_text, secret_key, iv, client_private_key):
+    secret_key_decrypted = client_private_key.decrypt(
+        secret_key,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        )
+    )
 
+    iv_decrypted = client_private_key.decrypt(
+        iv,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        )
+    )
+
+    cipher = Cipher(algorithms.AES(secret_key_decrypted), modes.CTR(iv_decrypted))
+    decryptor = cipher.decryptor()
+    plaintext = decryptor.update(cipher_text)
+
+    return plaintext
 
 
 # decryptor = cipher.decryptor()

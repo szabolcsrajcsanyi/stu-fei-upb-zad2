@@ -1,6 +1,7 @@
 import os
 from flask import Flask
 from api_requests import api
+from routes import main
 from extensions import db
 
 FLASK_RUN_HOST = os.environ.get('FLASK_RUN_HOST') or '0.0.0.0'
@@ -15,6 +16,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
 db.init_app(app)
 app.register_blueprint(api, url_prefix='/api')
+app.register_blueprint(main)
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0")

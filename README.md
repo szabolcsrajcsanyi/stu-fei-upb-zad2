@@ -2,7 +2,8 @@
 
 ## Ako rozbehat
 - `docker compose up`
-- otvor v browseri `http://localhost:5000/api/customers`
+- link pre backend api `http://localhost:5000/api/customers`
+- link pre frontend ktory desifruje backend api `http://localhost:5000/customers`
 
 ## Ako rozbehat bez service `be`
 - treba mat naistalovane `python verzia` aspon `10`, `docker` a `docker compose`
