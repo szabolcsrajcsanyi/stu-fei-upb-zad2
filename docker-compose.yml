@@ -14,15 +14,19 @@ services:
     ports:
       - 5433:5432
   
-#  be:
-#    restart: always
-#    build: ./flask-app
-#    ports:
-#      - 5000:5000
-#    volumes:
-#      - ./flask-app:/app
-#    depends_on:
-#      - db
-#    environment:
-#      - FLASK_APP=app.py
-#      - FLASK_RUN_HOST=0.0.0.0
+  be:
+    restart: always
+    build: ./flask-app
+    ports:
+      - 5000:5000
+    volumes:
+      - ./flask-app/app/:/app
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=test
+      - POSTGRES_PORT=5432
+      - FLASK_RUN_HOST=0.0.0.0
+      - DB_HOST=db
