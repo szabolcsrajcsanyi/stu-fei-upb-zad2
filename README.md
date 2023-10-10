@@ -6,7 +6,7 @@
 
 ## Ako rozbehat bez service `be`
 - treba mat naistalovane `python verzia` aspon `10`, `docker` a `docker compose`
-- `pip install -r ./flask-app/requirements.txt`
+- `pip install -r ./flask-app/app/requirements.txt`
 - odkommentuj v `docker-compose.yml` cely service `be`
 - na spustenie db: `docker compose up`
-- potom mozte spustit appku `python ./flask-app/app.py`
+- potom mozte spustit appku `python ./flask-app/app/app.py`
