@@ -1,0 +1,28 @@
+version: '2.1'
+
+services:
+  db:
+    restart: always
+    image: postgres:10
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=test
+    volumes:
+      - ./initdb-scripts:/docker-entrypoint-initdb.d
+#      - ./postgres-data/postgres:/var/lib/postgresql/data
+    ports:
+      - 5433:5432
+  
+#  be:
+#    restart: always
+#    build: ./flask-app
+#    ports:
+#      - 5000:5000
+#    volumes:
+#      - ./flask-app:/app
+#    depends_on:
+#      - db
+#    environment:
+#      - FLASK_APP=app.py
+#      - FLASK_RUN_HOST=0.0.0.0

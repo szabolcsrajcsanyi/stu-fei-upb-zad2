@@ -1,1 +1,1 @@
-# stu-fei-upb-zad2
+# UPB - zadanie 2
