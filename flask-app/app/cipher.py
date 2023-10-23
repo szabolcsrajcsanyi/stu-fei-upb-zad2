@@ -14,11 +14,7 @@ with open(PATH_TO_CLIENT_PUBLIC_KEY, "rb") as key_file:
     )
 
 def encrypt(plaintext):
-    # Sila kluca, snazime sa pomocou co najkratsieho kluca
-    # sifrovat co najviac informacie, preto sme vybrali
-    # 16B*8 = 128 bitovy kluc - sucasne odporucana bezpecnost
-    secret_key = os.urandom(16) # tajne klucko pre symmetricku sifru
-
+    secret_key = os.urandom(16)
     iv = os.urandom(16)
 
 
@@ -26,7 +22,6 @@ def encrypt(plaintext):
     encryptor = cipher.encryptor()
     cipher_text = encryptor.update(plaintext)
 
-    # encrypt secret key with client's public key
     secret_key_encrypted = CLIENT_PUBLIC_KEY.encrypt(
         secret_key,
         padding.OAEP(
