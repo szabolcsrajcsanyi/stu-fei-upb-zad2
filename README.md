@@ -2,6 +2,7 @@
 
 ## Ako rozbehat
 - `docker compose up`
+- link na frontend `http://localhost:3000/`
 - link pre backend api `http://localhost:5000/api/customers`
 - link pre frontend ktory desifruje backend api `http://localhost:5000/customers`
 

@@ -1,2 +1,7 @@
 /flask-app/app/__pycache__/
 /flask-app/__pycache__
+
+/frontend/node_modules/
+/frontend/build/
+/frontend/README.md
+/frontend/.gitignore

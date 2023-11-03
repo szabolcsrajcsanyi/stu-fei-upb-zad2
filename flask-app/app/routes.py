@@ -2,7 +2,7 @@ import json, base64, requests
 from cryptography.hazmat.primitives import serialization
 from flask import Blueprint, jsonify
 from cipher import decrypt
-from checksum import check_integrity
+from functions import check_integrity
 
 CLIENT_PRIVATE_KEY_PATH = './.secrets/client_private_key.pem'
 CLIENT_PRIVATE_KEY = ""
