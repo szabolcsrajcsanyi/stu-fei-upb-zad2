@@ -10,24 +10,15 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-
-function Copyright(props: any) {
-  return (
-    <Typography variant="body2" color="text.secondary" align="center" {...props}>
-      {'Copyright © '}
-      <Link color="inherit" href="https://mui.com/">
-        UPB - Team 14
-      </Link>{' '}
-      {new Date().getFullYear()}
-      {'.'}
-    </Typography>
-  );
-}
+import Copyright from './Copyright';
+import AlertDialog from './AlertDialog';
 
 const defaultTheme = createTheme();
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const [open, setOpen] = React.useState(false);
+  const [alertText, setAlertText] = React.useState('');
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,16 +37,19 @@ const SignIn = () => {
         body: JSON.stringify(payload),
       });
 
+      const responseData =  await response.json()
+
       if (!response.ok) {
-        console.log(response.body);
+        console.log(responseData);
+        setOpen(true);
+        setAlertText(responseData.message);
         // throw new Error('Failed to register');
+      } else {
+        console.log(responseData);
+
+        localStorage.setItem('token', responseData.token);
+        navigate('/internetbanking');
       }
-
-      const responseData = await response.json();
-      console.log(responseData);
-
-      localStorage.setItem('token', responseData.token);
-      navigate('/internetbanking');
 
     } catch (error) {
       console.error('There was an error!', error);
@@ -93,7 +87,7 @@ const SignIn = () => {
             />
             <TextField
               margin="normal"
-              required
+              required={true}
               fullWidth
               name="password"
               label="Password"
@@ -124,6 +118,8 @@ const SignIn = () => {
         </Box>
         <Copyright sx={{ mt: 8, mb: 4 }} />
       </Container>
+
+      <AlertDialog open={open} setOpen={setOpen} alertText={alertText} />
     </ThemeProvider>
   );
 }

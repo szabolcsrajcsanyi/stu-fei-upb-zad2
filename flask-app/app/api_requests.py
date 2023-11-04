@@ -57,7 +57,7 @@ def auth_customers():
     print(user_id, flush=True)
     print(user, flush=True)
     if not user or user.rsa_public_key is None:
-        return {"error": "User RSA public key is missing"}, 400
+        return {"message": "User RSA public key is missing"}, 400
  
     
     rsa_public_key = user.rsa_public_key.encode('utf-8')

@@ -3,8 +3,7 @@ import { decipher } from '../utils/cipher';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Container, Typography, Table, TableBody, TableCell, TableHead, TableRow, TextField, Paper } from '@mui/material';
 import { Lock, Person, ExitToApp } from '@mui/icons-material';
-
-
+import AlertDialog from './AlertDialog';
 
 const InternetBanking: React.FC = () => {
   const navigate = useNavigate();
@@ -13,6 +12,8 @@ const InternetBanking: React.FC = () => {
   const [showPrivateKeyInput, setShowPrivateKeyInput] = useState<boolean>(false);
   const [showRsaKeyInput, setShowRsaKeyInput] = useState<boolean>(false);
   const [rsaKey, setRsaKey] = useState<string>('');
+  const [open, setOpen] = React.useState(false);
+  const [alertText, setAlertText] = React.useState('');
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -21,8 +22,7 @@ const InternetBanking: React.FC = () => {
 
   function handleClearTable() {
     setData([]);
-
-}
+  }
 
   const handleUploadRsaKey = async () => {
     const token = localStorage.getItem('token');
@@ -40,13 +40,14 @@ const InternetBanking: React.FC = () => {
       });
 
       const result = await response.json();
-      if (response.ok) {
-        console.log("RSA Key uploaded successfully:", result);
-        setRsaKey('');
-        setShowRsaKeyInput(false);
-      } else {
-        console.log(result)
+      if (!response.ok) {
+        setAlertText(result.message)
+        setOpen(true)
+        return
       }
+      console.log("RSA Key uploaded successfully:", result);
+      setRsaKey('');
+      setShowRsaKeyInput(false);
     } catch (error) {
       console.error("An error occurred while uploading RSA Key:", error);
     }
@@ -76,6 +77,12 @@ const InternetBanking: React.FC = () => {
       },
     });
     const result = await response.json();
+
+    if (!response.ok) {
+      setAlertText(result.message)
+      setOpen(true)
+      return;
+    }
     console.log(result)
 
     const textBytes = Uint8Array.from(atob(result.text), c => c.charCodeAt(0));
@@ -231,6 +238,7 @@ const InternetBanking: React.FC = () => {
             </Button>
         </Box>
       </Paper>
+      <AlertDialog open={open} setOpen={setOpen} alertText={alertText} />
     </Container>
   );
 };

@@ -11,19 +11,8 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-
-function Copyright(props: any) {
-  return (
-    <Typography variant="body2" color="text.secondary" align="center" {...props}>
-      {'Copyright © '}
-      <Link color="inherit" href="https://mui.com/">
-        Your Website
-      </Link>{' '}
-      {new Date().getFullYear()}
-      {'.'}
-    </Typography>
-  );
-}
+import Copyright from './Copyright';
+import AlertDialog from './AlertDialog';
 
 const defaultTheme = createTheme();
 
@@ -36,6 +25,8 @@ const SignUp = () => {
   const [isLastNameValid, setIsLastNameValid] = useState<boolean>(true);
   const [isEmailValid, setIsEmailValid] = useState<boolean>(true);
   const [isPasswordValid, setIsPasswordValid] = useState<boolean>(true);
+  const [open, setOpen] = React.useState(false);
+  const [alertText, setAlertText] = React.useState('');
   const navigate = useNavigate();
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,14 +95,14 @@ const SignUp = () => {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to register');
-      }
-
       const responseData = await response.json();
-      console.log(responseData);
 
-      navigate('/login');
+      if (!response.ok) {
+        setOpen(true);
+        setAlertText(responseData.message);
+      } else {
+        navigate('/login');
+      }
 
     } catch (error) {
       console.error('There was an error!', error);
@@ -212,6 +203,8 @@ const SignUp = () => {
         </Box>
         <Copyright sx={{ mt: 5 }} />
       </Container>
+
+      <AlertDialog open={open} setOpen={setOpen} alertText={alertText} />
     </ThemeProvider>
   );
 }
