@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from flask_cors import CORS
 from extensions import db, cache
 
 FLASK_RUN_HOST = os.environ.get('FLASK_RUN_HOST') or '0.0.0.0'
@@ -26,6 +27,7 @@ def create_app():
     from routes import main
     app.register_blueprint(main)
     cache.init_app(app)
+    CORS(app)
 
     return app
 

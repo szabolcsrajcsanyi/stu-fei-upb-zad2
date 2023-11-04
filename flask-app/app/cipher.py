@@ -5,20 +5,23 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.backends import default_backend
 
 
-# PATH_TO_CLIENT_PUBLIC_KEY = "./.secrets/client_public_key.pem"
-# CLIENT_PUBLIC_KEY = ""
+PATH_TO_CLIENT_PUBLIC_KEY = "./.secrets/client_public_key.pem"
+CLIENT_PUBLIC_KEY = ""
 
-# with open(PATH_TO_CLIENT_PUBLIC_KEY, "rb") as key_file:
-    # CLIENT_PUBLIC_KEY = serialization.load_pem_public_key(
-        # key_file.read()
-    # )
+with open(PATH_TO_CLIENT_PUBLIC_KEY, "rb") as key_file:
+    CLIENT_PUBLIC_KEY = serialization.load_pem_public_key(
+        key_file.read()
+    )
 
 def encrypt(plaintext, rsa_public_key):
     secret_key = os.urandom(16)
     iv = os.urandom(16)
+
+    print(rsa_public_key, flush=True)
+    type(rsa_public_key)
     
     CLIENT_PUBLIC_KEY = serialization.load_pem_public_key(
-        rsa_public_key.encode('utf-8'),
+        rsa_public_key,
         backend=default_backend()
     )
 

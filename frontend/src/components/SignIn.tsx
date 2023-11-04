@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -15,7 +16,7 @@ function Copyright(props: any) {
     <Typography variant="body2" color="text.secondary" align="center" {...props}>
       {'Copyright © '}
       <Link color="inherit" href="https://mui.com/">
-        Your Website
+        UPB - Team 14
       </Link>{' '}
       {new Date().getFullYear()}
       {'.'}
@@ -23,17 +24,42 @@ function Copyright(props: any) {
   );
 }
 
-// TODO remove, this demo shouldn't need to reset the theme.
 const defaultTheme = createTheme();
 
 const SignIn = () => {
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get('email'),
-      password: data.get('password'),
-    });
+    const payload = {
+      email: data.get('email') as string,
+      password: data.get('password') as string,
+    };
+
+    try {
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        console.log(response.body);
+        // throw new Error('Failed to register');
+      }
+
+      const responseData = await response.json();
+      console.log(responseData);
+
+      localStorage.setItem('token', responseData.token);
+      navigate('/internetbanking');
+
+    } catch (error) {
+      console.error('There was an error!', error);
+    }
   };
 
   return (
@@ -83,15 +109,16 @@ const SignIn = () => {
             >
               Sign In
             </Button>
-
-            <Button
-              color="secondary"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-            >
-              Sign Up
-            </Button>
+            <Link href="/register" variant="body2">
+              <Button
+                color="secondary"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+              >
+                Sign Up
+              </Button>
+            </Link>
             
           </Box>
         </Box>

@@ -8,16 +8,19 @@ import {
   Route,
 } from 'react-router-dom';
 import SignUp from './components/SignUp';
+import InternetBanking from './components/InternetBanking';
+import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+
 root.render(
   <Router>
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/login" element={<SignIn />} />
-      <Route path="/register" element={<SignUp />} />
+      <Route path="/" element={<PublicRoute><Home /></PublicRoute>} />
+      <Route path="/login" element={<PublicRoute><SignIn /></PublicRoute>} />
+      <Route path="/register" element={<PublicRoute><SignUp /></PublicRoute>} />
+      <Route path="/internetbanking" element={<ProtectedRoute><InternetBanking /></ProtectedRoute>} />
     </Routes>
   </Router>
 );

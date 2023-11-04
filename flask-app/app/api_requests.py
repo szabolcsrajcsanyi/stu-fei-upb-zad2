@@ -23,23 +23,25 @@ def customers():
         customer_dict['IBAN'] = customer.iban
         customers_list.append(customer_dict)
 
-    encoded_plaintext = json.dumps(customers_list).encode('utf-8')
-    plaintext_checksum = check_integrity(encoded_plaintext)
+    return jsonify(customers_list), 200
 
-    cipher_text, secret_key_encrypted, iv_encrypted = encrypt(encoded_plaintext)
+    # encoded_plaintext = json.dumps(customers_list).encode('utf-8')
+    # plaintext_checksum = check_integrity(encoded_plaintext)
 
-    cipher_text_base64 = base64.b64encode(cipher_text).decode('utf-8')
-    secret_key_encrypted_base64 = base64.b64encode(secret_key_encrypted).decode('utf-8')
-    iv_encrypted_base64 = base64.b64encode(iv_encrypted).decode('utf-8')
-    checksum_base64 = base64.b64encode(plaintext_checksum).decode('utf-8')
+    # cipher_text, secret_key_encrypted, iv_encrypted = encrypt(encoded_plaintext)
 
-    response_json = dict()
-    response_json['text'] = cipher_text_base64
-    response_json['secret_key'] = secret_key_encrypted_base64
-    response_json['iv'] = iv_encrypted_base64
-    response_json['checksum'] = checksum_base64
+    # cipher_text_base64 = base64.b64encode(cipher_text).decode('utf-8')
+    # secret_key_encrypted_base64 = base64.b64encode(secret_key_encrypted).decode('utf-8')
+    # iv_encrypted_base64 = base64.b64encode(iv_encrypted).decode('utf-8')
+    # checksum_base64 = base64.b64encode(plaintext_checksum).decode('utf-8')
 
-    return response_json, 200
+    # response_json = dict()
+    # response_json['text'] = cipher_text_base64
+    # response_json['secret_key'] = secret_key_encrypted_base64
+    # response_json['iv'] = iv_encrypted_base64
+    # response_json['checksum'] = checksum_base64
+
+    # return response_json, 200
 
 @api.route('/auth/customers', methods=['GET'])
 def auth_customers():
@@ -49,15 +51,16 @@ def auth_customers():
         return error, status
 
     user_id = data.get('user_id')
-    user = User.query.get(user_id)
-    # user = User.query.filter_by(id=user_id).first()
-    print(user, flush=True)
+    # user = User.query.get(user_id)
     
+    user = User.query.filter_by(id=user_id).first()
+    print(user_id, flush=True)
+    print(user, flush=True)
     if not user or user.rsa_public_key is None:
         return {"error": "User RSA public key is missing"}, 400
  
     
-    rsa_public_key = user.rsa_public_key
+    rsa_public_key = user.rsa_public_key.encode('utf-8')
 
     _customers = Customer.query.all()
     customers_list = list()
@@ -168,8 +171,8 @@ def save_rsa_key():
     user_id = data.get('user_id')
 
     data = request.get_json()
-    public_rsa_key = data.get('rsa_pem')
-    if not public_rsa_key:
+    rsa_public_key = data.get('rsa_pem')
+    if not rsa_public_key:
         return jsonify({'message': 'No RSA key provided'}), 400
     
     # pem = public_rsa_key.public_bytes(
@@ -182,8 +185,9 @@ def save_rsa_key():
         return jsonify({'message': 'User not found'}), 404
 
     try:
-        user.public_rsa_key = public_rsa_key
-        db.session.add(user)
+        user.rsa_public_key = rsa_public_key
+        print(user, flush=True)
+        # db.session.merge(user)
         db.session.commit()
 
     except Exception as e:
