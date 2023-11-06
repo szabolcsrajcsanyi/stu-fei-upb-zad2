@@ -37,7 +37,14 @@ const SignIn = () => {
         body: JSON.stringify(payload),
       });
 
-      const responseData =  await response.json()
+      // const responseData =  await response.json()
+
+      let responseData;
+      if (response.headers.get('content-type')?.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
+      }
 
       if (!response.ok) {
         console.log(responseData);
@@ -46,7 +53,6 @@ const SignIn = () => {
         // throw new Error('Failed to register');
       } else {
         console.log(responseData);
-
         localStorage.setItem('token', responseData.token);
         navigate('/internetbanking');
       }

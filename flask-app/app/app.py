@@ -24,8 +24,6 @@ def create_app():
 
     from api_requests import api
     app.register_blueprint(api, url_prefix='/api')
-    from routes import main
-    app.register_blueprint(main)
     cache.init_app(app)
     CORS(app)
 
