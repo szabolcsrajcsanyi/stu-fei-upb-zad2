@@ -1,5 +1,25 @@
 import forge from 'node-forge';
 
+export function check_public_RSA_validity(rsa_key: string): forge.pki.rsa.PublicKey {
+    return  forge.pki.publicKeyFromPem(rsa_key);
+}
+
+export function check_private_RSA_validity(rsa_key: string): forge.pki.rsa.PrivateKey {
+    return  forge.pki.privateKeyFromPem(rsa_key);
+}
+
+export function generateRSAKeyPair(): { publicKey: string; privateKey: string } {
+    const keyPair = forge.pki.rsa.generateKeyPair({ bits: 2048, e: 0x10001 });
+
+    const publicKeyPem = forge.pki.publicKeyToPem(keyPair.publicKey);
+    const privateKeyPem = forge.pki.privateKeyToPem(keyPair.privateKey);
+
+    return {
+        publicKey: publicKeyPem,
+        privateKey: privateKeyPem
+    };
+}
+
 export function decipher(
     cipherText: Uint8Array, 
     secretKey: Uint8Array, 

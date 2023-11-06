@@ -1,33 +1,50 @@
 import React, { useState } from 'react';
-import { decipher } from '../utils/cipher';
+import { check_private_RSA_validity, check_public_RSA_validity, decipher, generateRSAKeyPair } from '../utils/cipher';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Container, Typography, Table, TableBody, TableCell, TableHead, TableRow, TextField, Paper } from '@mui/material';
+import { Box, Button, Container, Typography, Table, TableBody, TableCell, TableHead, TableRow, TextField, Paper, Alert } from '@mui/material';
 import { Lock, Person, ExitToApp } from '@mui/icons-material';
 import AlertDialog from './AlertDialog';
 
 const InternetBanking: React.FC = () => {
   const navigate = useNavigate();
+  const [generatedKeys, setGeneratedKeys] = useState<{ publicKey: string, privateKey: string } | null>(null);
   const [data, setData] = useState<any[]>([]);
   const [privateKey, setPrivateKey] = useState<string>('');
   const [showPrivateKeyInput, setShowPrivateKeyInput] = useState<boolean>(false);
   const [showRsaKeyInput, setShowRsaKeyInput] = useState<boolean>(false);
   const [rsaKey, setRsaKey] = useState<string>('');
-  const [open, setOpen] = React.useState(false);
-  const [alertText, setAlertText] = React.useState('');
+  const [open, setOpen] = useState(false);
+  const [alertText, setAlertText] = useState('');
+  const [successAlert, setSuccessAlert] = useState(false);
+  const [successAlertText, setSuccessAlertText] = useState('');
+  
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
 
-  function handleClearTable() {
+  const handleClearTable = () => {
     setData([]);
+    setSuccessAlert(true);
+    setSuccessAlertText("Customers' list has been cleared!")
+  }
+
+  const clearRSAkeyPair = () => {
+    setGeneratedKeys(null)
+  }
+
+  const generateRSAkeys = () => {
+    const keys = generateRSAKeyPair();
+    setGeneratedKeys(keys);
   }
 
   const handleUploadRsaKey = async () => {
     const token = localStorage.getItem('token');
 
     try {
+      check_public_RSA_validity(rsaKey)
+
       const response = await fetch('http://localhost:5000/api/auth/upload_key', {
         method: 'POST',
         headers: {
@@ -48,7 +65,12 @@ const InternetBanking: React.FC = () => {
       console.log("RSA Key uploaded successfully:", result);
       setRsaKey('');
       setShowRsaKeyInput(false);
-    } catch (error) {
+
+      setSuccessAlertText('RSA key uploaded successfully!')
+      setSuccessAlert(true)
+    } catch (error: any) {
+      setAlertText("The provided public RSA key has invalid format");
+      setOpen(true);
       console.error("An error occurred while uploading RSA Key:", error);
     }
   };
@@ -56,8 +78,11 @@ const InternetBanking: React.FC = () => {
   const fetchWithoutEncryption = async () => {
     const response = await fetch('http://localhost:5000/api/customers');
     const result = await response.json();
+    console.log(result)
     setData(result);
     setShowPrivateKeyInput(false);
+    setSuccessAlertText('Customers fetched without encryption successfully!')
+    setSuccessAlert(true)
   };
 
   const toggleEncryptionInput = () => {
@@ -71,31 +96,42 @@ const InternetBanking: React.FC = () => {
     }
 
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/auth/customers', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const result = await response.json();
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/customers', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
 
-    if (!response.ok) {
-      setAlertText(result.message)
-      setOpen(true)
-      return;
+      if (!response.ok) {
+        setAlertText(result.message)
+        setOpen(true)
+        return;
+      }
+      console.log(result)
+
+      const textBytes = Uint8Array.from(atob(result.text), c => c.charCodeAt(0));
+      const secretKeyBytes = Uint8Array.from(atob(result.secret_key), c => c.charCodeAt(0));
+      const ivBytes = Uint8Array.from(atob(result.iv), c => c.charCodeAt(0));
+
+      const decryptedBytes = decipher(textBytes, secretKeyBytes, ivBytes, privateKey);
+
+      const decryptedText = new TextDecoder().decode(decryptedBytes);
+      setData(JSON.parse(decryptedText));
+
+      setPrivateKey('');
+      setShowPrivateKeyInput(false);
+
+      setSuccessAlertText('Customers fetched with encryption successfully!')
+      setSuccessAlert(true)
+
+    } catch (error: any) {
+        setAlertText('You provided the wrong private RSA key');
+        setOpen(true);
+        console.error("An error occurred during fetchWithEncryption:", error);
+
     }
-    console.log(result)
-
-    const textBytes = Uint8Array.from(atob(result.text), c => c.charCodeAt(0));
-    const secretKeyBytes = Uint8Array.from(atob(result.secret_key), c => c.charCodeAt(0));
-    const ivBytes = Uint8Array.from(atob(result.iv), c => c.charCodeAt(0));
-
-    const decryptedBytes = decipher(textBytes, secretKeyBytes, ivBytes, privateKey);
-
-    const decryptedText = new TextDecoder().decode(decryptedBytes);
-    setData(JSON.parse(decryptedText));
-
-    setPrivateKey('');
-    setShowPrivateKeyInput(false);
   };
 
   return (
@@ -118,6 +154,7 @@ const InternetBanking: React.FC = () => {
           textAlign: 'center',
         }}
       >
+        {successAlert && <Alert severity="success">{successAlertText}</Alert>}
         <Typography variant="h4" gutterBottom>
           <Lock fontSize="large" /> Internetbanking
         </Typography>
@@ -130,7 +167,7 @@ const InternetBanking: React.FC = () => {
             variant="contained" 
             color="success" 
             onClick={() => setShowRsaKeyInput(!showRsaKeyInput)} 
-            sx={{ margin: '1em', width: '400px' }}>
+            sx={{ margin: '1em', width: '500px' }}>
             Upload Public RSA
           </Button>
           {showRsaKeyInput && (
@@ -160,7 +197,7 @@ const InternetBanking: React.FC = () => {
             variant="contained" 
             color="secondary" 
             onClick={fetchWithoutEncryption} 
-            sx={{ margin: '1em', width: '400px' }}
+            sx={{ margin: '1em', width: '500px' }}
             >
             Get Customers (Without Encryption)
           </Button>
@@ -168,11 +205,10 @@ const InternetBanking: React.FC = () => {
             variant="contained" 
             color="primary" 
             onClick={toggleEncryptionInput} 
-            sx={{ margin: '1em', width: '400px' }}
+            sx={{ margin: '1em', width: '500px' }}
             >
             Get Customers (With Encryption)
           </Button>
-        </Box>
 
         {showPrivateKeyInput && (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '1em' }}>
@@ -191,6 +227,55 @@ const InternetBanking: React.FC = () => {
             </Button>
           </Box>
         )}
+
+        <Button 
+            variant="outlined" 
+            color="success" 
+            onClick={generateRSAkeys} 
+            sx={{ margin: '1em', width: '500px' }}
+            >
+            Generate RSA key pairs
+        </Button>
+
+        {generatedKeys && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '1em' }}>
+            <TextField
+              label="Generated Public RSA Key"
+              variant="outlined"
+              fullWidth
+              multiline
+              rows={8}
+              value={generatedKeys.publicKey}
+              InputProps={{
+                readOnly: true,
+              }}
+              sx={{ marginBottom: '1em' }}
+            />
+            <TextField
+              label="Generated Private RSA Key"
+              variant="outlined"
+              fullWidth
+              multiline
+              rows={8}
+              value={generatedKeys.privateKey}
+              InputProps={{
+                readOnly: true,
+              }}
+              sx={{ marginBottom: '1em' }}
+            />
+
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={clearRSAkeyPair}
+                sx={{ margin: '1em', width: '200px' }}>
+                Clear keys
+              </Button>
+          </Box>
+        )}
+
+        </Box>
+
 
         {data.length > 0 && (
           <Table sx={{ mt: 3 }}>

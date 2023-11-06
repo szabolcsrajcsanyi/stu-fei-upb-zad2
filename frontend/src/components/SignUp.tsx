@@ -59,12 +59,13 @@ const SignUp = () => {
   }
 
   const isValidEmail = (email: string) => {
-    const EMAIL_PATTERN: RegExp = /^[a-zA-Z0-9]+@(?:[a-zA-Z0-9]+\.)+[A-Za-z]+$/;
+    const EMAIL_PATTERN: RegExp = /^[a-zA-Z0-9](?:[a-zA-Z0-9-.]*[a-zA-Z0-9])?@(?:[a-zA-Z0-9]+\.)+[A-Za-z]+$/;
     return EMAIL_PATTERN.test(email);
   }
+  
 
   const passValid = (pass: string) => {
-    const PASSWORD_PATTERN: RegExp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+    const PASSWORD_PATTERN: RegExp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#.-]{8,}$/;
     return PASSWORD_PATTERN.test(pass);
   };
 
@@ -82,7 +83,9 @@ const SignUp = () => {
         !isValidName(payload.lastname) ||
         !isValidEmail(payload.email) ||
         !passValid(payload.password)) {
-      console.error('Validation failed');
+        
+      setAlertText('Validation failed');
+      setOpen(true);
       return;
     }
 

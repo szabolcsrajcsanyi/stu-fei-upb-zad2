@@ -2,7 +2,7 @@ import os, re, hashlib, jwt
 from flask import jsonify, current_app as app
 from cryptography.hazmat.primitives import hashes
 
-PASSWORD_PATTERN = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$')
+PASSWORD_PATTERN = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#.-]{8,}$')
 
 def validate_jwt(token):
     if not token:
