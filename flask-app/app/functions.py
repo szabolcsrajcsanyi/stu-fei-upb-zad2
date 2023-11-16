@@ -1,6 +1,7 @@
-import os, re, hashlib, jwt
+import os, re, hashlib, jwt, json, base64, random
 from flask import jsonify, current_app as app
 from cryptography.hazmat.primitives import hashes
+from cipher import encrypt
 
 PASSWORD_PATTERN = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#.-]{8,}$')
 
@@ -45,3 +46,29 @@ def check_password_strength(password):
         return "Password doesn't meet complexity requirements."
     
     return "OK"
+
+def encode_response(rsa_public_key, plain_text):
+    encoded_plaintext = json.dumps(plain_text).encode('utf-8')
+    plaintext_checksum = check_integrity(encoded_plaintext)
+
+    cipher_text, secret_key_encrypted, iv_encrypted = encrypt(encoded_plaintext, rsa_public_key)
+
+    cipher_text_base64 = base64.b64encode(cipher_text).decode('utf-8')
+    secret_key_encrypted_base64 = base64.b64encode(secret_key_encrypted).decode('utf-8')
+    iv_encrypted_base64 = base64.b64encode(iv_encrypted).decode('utf-8')
+    checksum_base64 = base64.b64encode(plaintext_checksum).decode('utf-8')
+
+    response_json = dict()
+    response_json['text'] = cipher_text_base64
+    response_json['secret_key'] = secret_key_encrypted_base64
+    response_json['iv'] = iv_encrypted_base64
+    response_json['checksum'] = checksum_base64
+    return response_json
+
+
+def generate_unique_iban(User):
+    while True:
+        new_iban =  f'SK{random.randint(100000000, 999999999)}'
+        existing_user = User.query.filter_by(iban=new_iban).first()
+        if not existing_user:
+            return new_iban

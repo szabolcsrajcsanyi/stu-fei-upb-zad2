@@ -21,7 +21,7 @@ class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sum = db.Column(db.Integer)
     timestamp = db.Column(db.DateTime)
-    users = db.relationship('User', secondary='user_transaction_association', back_populates='transactions', cascade='all, delete-orphan')
+    users = db.relationship('User', secondary='user_transaction_association', back_populates='transactions')
 
 class UserTransactionAssociation(db.Model):
     __tablename__ = 'user_transaction_association'
@@ -39,10 +39,9 @@ class User(db.Model):
     salt = db.Column(db.String(255), nullable=False)
     hash_pass = db.Column(db.String(255), nullable=False)
     rsa_public_key = db.Column(db.String(2048), nullable=True)
-    iban = db.Column(db.String(12))
+    iban = db.Column(db.String(13))
     account_balance = db.Column(db.Integer,nullable=False)
-    transactions = db.relationship('Transaction', secondary='user_transaction_association', back_populates='users', cascade='all, delete-orphan')
-
+    transactions = db.relationship('Transaction', secondary='user_transaction_association', back_populates='users', cascade='all, delete-orphan', single_parent=True)
     def __init__(self, firstname, lastname, email, salt, hash_pass, iban):
         self.firstname = firstname
         self.lastname = lastname

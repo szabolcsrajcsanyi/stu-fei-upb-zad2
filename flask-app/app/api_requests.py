@@ -3,7 +3,7 @@ from flask import current_app as app, Blueprint, jsonify, request
 from database_model import Customer, User
 from cipher import encrypt
 from extensions import db, cache
-from functions import check_integrity, check_password_strength, validate_jwt, salted_hash, check_salted_hash
+from functions import check_integrity, check_password_strength, validate_jwt, salted_hash, check_salted_hash, encode_response, generate_unique_iban
 from cryptography.hazmat.primitives import serialization
 
 
@@ -116,7 +116,8 @@ def register():
     
 
     salt, hashed_pw = salted_hash(password)
-    new_user = User(firstname=firstname, lastname=lastname, email=email, salt=salt.hex(), hash_pass=hashed_pw.hex())
+
+    new_user = User(firstname=firstname, lastname=lastname, email=email, salt=salt.hex(), hash_pass=hashed_pw.hex(), iban=generate_unique_iban(User))
 
     db.session.add(new_user)
     db.session.commit()
@@ -196,4 +197,18 @@ def save_rsa_key():
         return jsonify({'message': 'Error updating RSA key'}), 500
 
     return jsonify({'message': 'RSA key saved successfully'}), 200
+
+@api.route('/auth/account_balance', methods=['POST'])
+def send_account_balance():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return error, status
+
+    user_id = data.get('user_id')
+    user = User.query.get(user_id)
+    rsa_public_key = user.rsa_public_key.encode('utf-8')
+    resposne = encode_response(rsa_public_key, user.account_balance)
+
+    return resposne, 200
 

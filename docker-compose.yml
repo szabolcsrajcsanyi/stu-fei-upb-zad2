@@ -15,7 +15,6 @@ services:
       - 5433:5432
   
   be:
-    restart: always
     build: ./flask-app
     ports:
       - 5000:5000
@@ -32,7 +31,6 @@ services:
       - DB_HOST=db
 
   fe:
-    restart: always
     build: ./frontend
     ports:
       - 3000:3000
