@@ -5,16 +5,16 @@ CREATE TABLE customers (
     iban VARCHAR(34)
 );
 
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    firstname VARCHAR(50) NOT NULL,
-    lastname VARCHAR(50) NOT NULL,
-    email VARCHAR(50
-    ) UNIQUE NOT NULL,
-    salt VARCHAR(255) NOT NULL,
-    hash_pass VARCHAR(255) NOT NULL,
-    rsa_public_key VARCHAR(2048)
-);
+-- CREATE TABLE users (
+--     id SERIAL PRIMARY KEY,
+--     firstname VARCHAR(50) NOT NULL,
+--     lastname VARCHAR(50) NOT NULL,
+--     email VARCHAR(50
+--     ) UNIQUE NOT NULL,
+--     salt VARCHAR(255) NOT NULL,
+--     hash_pass VARCHAR(255) NOT NULL,
+--     rsa_public_key VARCHAR(2048)
+-- );
 
 
 INSERT INTO customers (name, surname, iban)

@@ -26,6 +26,9 @@ def create_app():
     app.register_blueprint(api, url_prefix='/api')
     cache.init_app(app)
     CORS(app)
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
 
     return app
 
