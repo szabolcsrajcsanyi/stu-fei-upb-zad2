@@ -45,6 +45,7 @@ const SignIn = () => {
       } else {
         responseData = await response.text();
       }
+      
 
       if (!response.ok) {
         console.log(responseData);

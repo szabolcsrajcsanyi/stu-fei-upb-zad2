@@ -11,6 +11,7 @@ POSTGRES_DB = os.environ.get('POSTGRES_DB') or 'test'
 POSTGRES_PORT = os.environ.get('POSTGRES_PORT') or '5433'
 DATABASE_URI = 'postgresql://' + POSTGRES_USER + ':' + POSTGRES_PASSWORD + '@' + DB_HOST + ':' + POSTGRES_PORT + '/' + POSTGRES_DB
 print(DATABASE_URI)
+
 def create_app():
     app = Flask(__name__)
     
