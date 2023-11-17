@@ -37,7 +37,7 @@ services:
     depends_on:
       - be
 
-  init-data:
-    build: ./init-data
-    depends_on:
-      - be
+  # init-data:
+  #   build: ./init-data
+  #   depends_on:
+  #     - be
