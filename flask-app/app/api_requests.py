@@ -101,8 +101,14 @@ def register():
     lastname = data.get('lastname')
     email = data.get('email')
     password = data.get('password')
+    addressLine1 = data.get('addressLine1')
+    addressLine2 = data.get('addressLine2')
+    city = data.get('city')
+    state = data.get('state')
+    zipCode = data.get('zipCode')
+    telephone = data.get('telephone')
 
-    if not all([firstname, lastname, email, password]):
+    if not all([firstname, lastname, email, password, addressLine1, city, state, zipCode, telephone]):
         return jsonify({'message': 'Missing data'}), 400
 
     existing_user = User.query.filter_by(email=email).first()
@@ -116,7 +122,18 @@ def register():
 
     salt, hashed_pw = salted_hash(password)
 
-    new_user = User(firstname=firstname, lastname=lastname, email=email, salt=salt.hex(), hash_pass=hashed_pw.hex(), iban=generate_unique_iban(User))
+    new_user = User(firstname=firstname, 
+                    lastname=lastname, 
+                    email=email, 
+                    addressLine1=addressLine1,
+                    addressLine2=addressLine2,
+                    city=city,
+                    state=state,
+                    zipCode=zipCode,
+                    telephone=telephone,
+                    salt=salt.hex(), 
+                    hash_pass=hashed_pw.hex(), 
+                    iban=generate_unique_iban(User))
 
     db.session.add(new_user)
     db.session.commit()
@@ -125,7 +142,13 @@ def register():
         'id': new_user.id,
         'firstname': new_user.firstname,
         'lastname': new_user.lastname,
-        'email': new_user.email
+        'email': new_user.email,
+        'addressLine1': new_user.addressLine1,
+        'addressLine2': new_user.addressLine2,
+        'city': new_user.city,
+        'state': new_user.state,
+        'zipCode': new_user.zipCode,
+        'telephone': new_user.telephone,
     }), 200
 
 

@@ -21,10 +21,20 @@ const SignUp = () => {
   const [_lastName, setLastName] = useState<string>('');
   const [_email, setEmail] = useState<string>('');
   const [_password, setPassword] = useState<string>('');
+  const [addressLine1, setAddressLine1] = useState<string>('');
+  const [addressLine2, setAddressLine2] = useState<string>('');
+  const [city, setCity] = useState<string>('');
+  const [state, setState] = useState<string>('');
+  const [postalCode, setPostalCode] = useState<string>('');
+  const [telephone, setTelephone] = useState<string>('');
   const [isFirstNameValid, setIsFirstNameValid] = useState<boolean>(true);
   const [isLastNameValid, setIsLastNameValid] = useState<boolean>(true);
   const [isEmailValid, setIsEmailValid] = useState<boolean>(true);
   const [isPasswordValid, setIsPasswordValid] = useState<boolean>(true);
+  const [isCityValid, setIsCityValid] = useState<boolean>(true);
+  const [isStateValid, setIsStateValid] = useState<boolean>(true);
+  const [isPostalCodeValid, setIsPostalCodeValid] = useState<boolean>(true);
+  const [isTelephoneValid, setIsTelephoneValid] = useState<boolean>(true);
   const [open, setOpen] = React.useState(false);
   const [alertText, setAlertText] = React.useState('');
   const navigate = useNavigate();
@@ -53,20 +63,67 @@ const SignUp = () => {
     setIsEmailValid(isValidEmail(email));
   }
 
-  const isValidName = (name: string) => {
+  const handleAddressLine1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddressLine1(e.target.value);
+  };
+
+  const handleAddressLine2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAddressLine2(e.target.value);
+  };
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const city = e.target.value;
+    setCity(city);
+    setIsCityValid(isValidCityStateName(city));
+  };
+
+  const handleStateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const state = e.target.value;
+    setState(state);
+    setIsStateValid(isValidCityStateName(state));
+  };
+
+  const handlePostalCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const postalCode = e.target.value;
+    setPostalCode(postalCode);
+    setIsPostalCodeValid(isValidPostalCode(postalCode));
+  };
+
+  const handleTelephoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const telephone = e.target.value;
+    setTelephone(telephone);
+    setIsTelephoneValid(isValidPhoneNumber(telephone));
+  };
+
+  const isValidName = (name: string): boolean => {
     const NAME_PATTERN: RegExp = /^[A-Za-z]+(?:['-][A-Za-z]+)*$/;
     return NAME_PATTERN.test(name);
   }
 
-  const isValidEmail = (email: string) => {
+  const isValidEmail = (email: string): boolean => {
     const EMAIL_PATTERN: RegExp = /^[a-zA-Z0-9](?:[a-zA-Z0-9-.]*[a-zA-Z0-9])?@(?:[a-zA-Z0-9]+\.)+[A-Za-z]+$/;
     return EMAIL_PATTERN.test(email);
   }
   
 
-  const passValid = (pass: string) => {
+  const passValid = (pass: string): boolean => {
     const PASSWORD_PATTERN: RegExp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#.-]{8,}$/;
     return PASSWORD_PATTERN.test(pass);
+  };
+
+  const isValidCityStateName = (cityName: string): boolean => {
+    const CITY_NAME_PATTERN: RegExp = /^[A-Za-z]+(?:[ \-'][A-Za-z]+)*$/;
+    return CITY_NAME_PATTERN.test(cityName);
+  };
+
+  const isValidPostalCode = (postalCode: string): boolean => {
+    const POSTAL_CODE_PATTERN: RegExp = /^\d{3} \d{2}$/;
+    return POSTAL_CODE_PATTERN.test(postalCode);
+  };
+
+  const isValidPhoneNumber = (phoneNumber: string): boolean => {
+    const PHONE_NUMBER_PATTERN: RegExp = /^\d{10}$/;
+    return PHONE_NUMBER_PATTERN.test(phoneNumber);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -77,12 +134,24 @@ const SignUp = () => {
       lastname: data.get('lastName') as string,
       email: data.get('email') as string,
       password: data.get('password') as string,
+      addressLine1: data.get('addressLine1') as string,
+      addressLine2: data.get('addressLine2') as string,
+      city: data.get('city') as string,
+      state: data.get('state') as string,
+      zipCode: data.get('zipcode') as string,
+      telephone: data.get('telephone') as string,
     };
+
+    console.log(payload)
 
     if (!isValidName(payload.firstname) || 
         !isValidName(payload.lastname) ||
         !isValidEmail(payload.email) ||
-        !passValid(payload.password)) {
+        !passValid(payload.password) ||
+        !isValidCityStateName(payload.city) ||
+        !isValidCityStateName(payload.state) ||
+        !isValidPostalCode(payload.zipCode) ||
+        !isValidPhoneNumber(payload.telephone)) {
         
       setAlertText('Validation failed');
       setOpen(true);
@@ -114,7 +183,7 @@ const SignUp = () => {
 
   return (
     <ThemeProvider theme={defaultTheme}>
-      <Container component="main" maxWidth="xs">
+      <Container component="main" maxWidth="sm">
         <CssBaseline />
         <Box
           sx={{
@@ -184,6 +253,89 @@ const SignUp = () => {
                   error={!isPasswordValid}
                   onChange={handlePasswordChange}
                   helperText={!isPasswordValid && 'Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character'}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  required
+                  fullWidth
+                  name="addressLine1"
+                  label="Address Line 1"
+                  type="addressLine1"
+                  id="addressLine1"
+                  autoComplete="addressLine1"
+                  // error={!isPasswordValid}
+                  onChange={handleAddressLine1Change}
+                  // helperText={!isPasswordValid && 'Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character'}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  name="addressLine2"
+                  label="Address Line 2"
+                  type="addressLine2"
+                  id="addressLine2"
+                  autoComplete="addressLine2"
+                  // error={!isPasswordValid}
+                  onChange={handleAddressLine2Change}
+                  // helperText={!isPasswordValid && 'Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character'}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  required
+                  fullWidth
+                  name="city"
+                  label="City"
+                  type="city"
+                  id="city"
+                  autoComplete="city"
+                  error={!isCityValid}
+                  onChange={handleCityChange}
+                  helperText={!isCityValid && 'Please enter a valid city name'}
+                />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <TextField
+                  required
+                  fullWidth
+                  name="state"
+                  label="State"
+                  type="state"
+                  id="state"
+                  autoComplete="state"
+                  error={!isStateValid}
+                  onChange={handleStateChange}
+                  helperText={!isStateValid && 'Please enter a valid state name'}
+                />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <TextField
+                  required
+                  fullWidth
+                  name="zipcode"
+                  label="Zip Code"
+                  type="zipcode"
+                  id="zipcode"
+                  autoComplete="zipcode"
+                  error={!isPostalCodeValid}
+                  onChange={handlePostalCodeChange}
+                  helperText={!isPostalCodeValid && 'Postal code most be in format "123 45"'}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  required
+                  fullWidth
+                  name="telephone"
+                  label="Telephone number"
+                  type="telephone"
+                  id="telephone"
+                  autoComplete="telephone"
+                  error={!isTelephoneValid}
+                  onChange={handleTelephoneChange}
+                  helperText={!isTelephoneValid && 'Telephone number must be 10 digits long'}
                 />
               </Grid>
             </Grid>

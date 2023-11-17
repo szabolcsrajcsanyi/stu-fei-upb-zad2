@@ -33,6 +33,12 @@ class User(db.Model):
     firstname = db.Column(db.String(50), nullable=False)
     lastname = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(50), unique=True, nullable=False)
+    addressLine1 = db.Column(db.String(100), nullable=False)
+    addressLine2 = db.Column(db.String(100), nullable=True)
+    city = db.Column(db.String(100), nullable=False)
+    state = db.Column(db.String(100), nullable=False)
+    zipCode = db.Column(db.String(10), nullable=False)
+    telephone = db.Column(db.String(20), nullable=False)
     salt = db.Column(db.String(255), nullable=False)
     hash_pass = db.Column(db.String(255), nullable=False)
     rsa_public_key = db.Column(db.String(2048), nullable=True)
@@ -41,10 +47,16 @@ class User(db.Model):
     sent_transactions = db.relationship('Transaction', foreign_keys='Transaction.sender_id')
     received_transactions = db.relationship('Transaction', foreign_keys='Transaction.recipient_id')
 
-    def __init__(self, firstname, lastname, email, salt, hash_pass, iban):
+    def __init__(self, firstname, lastname, email, addressLine1, addressLine2, city, state, zipCode, telephone, salt, hash_pass, iban):
         self.firstname = firstname
         self.lastname = lastname
         self.email = email
+        self.addressLine1 = addressLine1
+        self.addressLine2 = addressLine2
+        self.city = city
+        self.state = state
+        self.zipCode = zipCode
+        self.telephone = telephone
         self.salt = salt
         self.hash_pass = hash_pass
         self.account_balance = 0
