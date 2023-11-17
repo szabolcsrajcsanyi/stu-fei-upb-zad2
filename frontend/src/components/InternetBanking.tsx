@@ -201,6 +201,15 @@ const InternetBanking: React.FC = () => {
               Make Payment
             </Button>
           </Link>
+          <Link to="/editprofile" style={{ textDecoration: 'none' }}>
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              sx={{ margin: '1em', width: '500px' }}
+            >
+              Update profile
+            </Button>
+          </Link>
           <Button 
             variant="contained" 
             color="success" 

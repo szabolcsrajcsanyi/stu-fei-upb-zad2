@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
 import TextField from '@mui/material/TextField';
-import Link from '@mui/material/Link';
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
@@ -13,15 +12,15 @@ import Container from '@mui/material/Container';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import Copyright from './Copyright';
 import AlertDialog from './AlertDialog';
-import { isValidCityStateName, isValidEmail, isValidName, isValidPhoneNumber, isValidPostalCode, passValid } from '../utils/validation';
+import { isValidCityStateName, isValidEmail, isValidName, isValidPhoneNumber, isValidPostalCode } from '../utils/validation';
+import { Alert } from '@mui/material';
 
 const defaultTheme = createTheme();
 
-const SignUp = () => {
-  const [_firstName, setFirstName] = useState<string>('');
-  const [_lastName, setLastName] = useState<string>('');
-  const [_email, setEmail] = useState<string>('');
-  const [_password, setPassword] = useState<string>('');
+const EditProfile = () => {
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
   const [addressLine1, setAddressLine1] = useState<string>('');
   const [addressLine2, setAddressLine2] = useState<string>('');
   const [city, setCity] = useState<string>('');
@@ -31,20 +30,52 @@ const SignUp = () => {
   const [isFirstNameValid, setIsFirstNameValid] = useState<boolean>(true);
   const [isLastNameValid, setIsLastNameValid] = useState<boolean>(true);
   const [isEmailValid, setIsEmailValid] = useState<boolean>(true);
-  const [isPasswordValid, setIsPasswordValid] = useState<boolean>(true);
   const [isCityValid, setIsCityValid] = useState<boolean>(true);
   const [isStateValid, setIsStateValid] = useState<boolean>(true);
   const [isPostalCodeValid, setIsPostalCodeValid] = useState<boolean>(true);
   const [isTelephoneValid, setIsTelephoneValid] = useState<boolean>(true);
   const [open, setOpen] = React.useState(false);
   const [alertText, setAlertText] = React.useState('');
+  const [successAlert, setSuccessAlert] = useState(false);
+  const [successAlertText, setSuccessAlertText] = useState('');
   const navigate = useNavigate();
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value;
-    setPassword(newPassword);
-    setIsPasswordValid(passValid(newPassword));
-  };
+  useEffect(() => {
+    const fetchUserData = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setOpen(true);
+                setAlertText('You are not logged in');
+                return;
+            }
+            const rsaKey = localStorage.getItem('privateRsaKey');
+            if (!rsaKey) {
+                setOpen(true);
+                setAlertText('No RSA private key provided');
+                return;
+            }
+
+            const response = await fetch('http://localhost:5000/api/auth/get_user_data', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            console.log(data)
+            setFirstName(data.firstname);
+            setLastName(data.lastname);
+            setEmail(data.email);
+            setAddressLine1(data.addressLine1);
+            setAddressLine2(data.addressLine2);
+            setCity(data.city);
+            setState(data.state);
+            setPostalCode(data.zipCode);
+            setTelephone(data.telephone);
+    };
+
+    fetchUserData();
+  }, []);
 
   const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const firstName = e.target.value;
@@ -96,6 +127,8 @@ const SignUp = () => {
     setIsTelephoneValid(isValidPhoneNumber(telephone));
   };
 
+  
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -117,7 +150,6 @@ const SignUp = () => {
     if (!isValidName(payload.firstname) || 
         !isValidName(payload.lastname) ||
         !isValidEmail(payload.email) ||
-        !passValid(payload.password) ||
         !isValidCityStateName(payload.city) ||
         !isValidCityStateName(payload.state) ||
         !isValidPostalCode(payload.zipCode) ||
@@ -129,26 +161,37 @@ const SignUp = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setOpen(true);
+            setAlertText('You are not logged in');
+        return;
+        }
+    
+        const response = await fetch('http://localhost:5000/api/auth/update_user', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+        });
 
-      const responseData = await response.json();
+        const responseData = await response.json();
 
-      if (!response.ok) {
-        setOpen(true);
-        setAlertText(responseData.message);
-      } else {
-        navigate('/login');
-      }
+        if (!response.ok) {
+            setOpen(true);
+            setAlertText(responseData.message);
+        } else {
+            setSuccessAlert(true);
+            setSuccessAlertText('Profile updated successfully');
+        }
 
-    } catch (error) {
-      console.error('There was an error!', error);
-    }
+        } catch (error) {
+            console.error('There was an error!', error);
+            setOpen(true);
+            setAlertText('Profile update failed:' + (error as Error).message);
+        }
   };
 
   return (
@@ -166,8 +209,9 @@ const SignUp = () => {
           <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
             <LockOutlinedIcon />
           </Avatar>
+          {successAlert && <Alert severity="success">{successAlertText}</Alert>}
           <Typography component="h1" variant="h5">
-            Register  
+            Edit Personal Data
           </Typography>
           <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
             <Grid container spacing={2}>
@@ -177,6 +221,7 @@ const SignUp = () => {
                   name="firstName"
                   required
                   fullWidth
+                  value={firstName}
                   id="firstName"
                   label="First Name"
                   autoFocus
@@ -189,6 +234,7 @@ const SignUp = () => {
                 <TextField
                   required
                   fullWidth
+                  value={lastName}
                   id="lastName"
                   label="Last Name"
                   name="lastName"
@@ -202,6 +248,7 @@ const SignUp = () => {
                 <TextField
                   required
                   fullWidth
+                  value={email}
                   id="email"
                   label="Email Address"
                   name="email"
@@ -215,20 +262,7 @@ const SignUp = () => {
                 <TextField
                   required
                   fullWidth
-                  name="password"
-                  label="Password"
-                  type="password"
-                  id="password"
-                  autoComplete="new-password"
-                  error={!isPasswordValid}
-                  onChange={handlePasswordChange}
-                  helperText={!isPasswordValid && 'Password must be at least 8 characters long, contain at least one uppercase letter, one lowercase letter, one number and one special character'}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  required
-                  fullWidth
+                  value={addressLine1}
                   name="addressLine1"
                   label="Address Line 1"
                   type="addressLine1"
@@ -242,6 +276,7 @@ const SignUp = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
+                  value={addressLine2}
                   name="addressLine2"
                   label="Address Line 2"
                   type="addressLine2"
@@ -256,6 +291,7 @@ const SignUp = () => {
                 <TextField
                   required
                   fullWidth
+                  value={city}
                   name="city"
                   label="City"
                   type="city"
@@ -270,6 +306,7 @@ const SignUp = () => {
                 <TextField
                   required
                   fullWidth
+                  value={state}
                   name="state"
                   label="State"
                   type="state"
@@ -284,6 +321,7 @@ const SignUp = () => {
                 <TextField
                   required
                   fullWidth
+                  value={postalCode}
                   name="zipcode"
                   label="Zip Code"
                   type="zipcode"
@@ -298,6 +336,7 @@ const SignUp = () => {
                 <TextField
                   required
                   fullWidth
+                  value={telephone}
                   name="telephone"
                   label="Telephone number"
                   type="telephone"
@@ -313,17 +352,20 @@ const SignUp = () => {
               type="submit"
               fullWidth
               variant="contained"
+              color="success" 
               sx={{ mt: 3, mb: 2 }}
             >
-              Sign Up
+              Edit profile
             </Button>
-            <Grid container justifyContent="flex-end">
-              <Grid item>
-                <Link href="/login" variant="body2">
-                  Already have an account? Sign in
-                </Link>
-              </Grid>
-            </Grid>
+            <Link to="/internetbanking" style={{ textDecoration: 'none' }}>
+                <Button
+                fullWidth
+                variant="contained"
+                sx={{ mt: 3, mb: 2 }}
+                >
+                Back
+                </Button>
+            </Link>
           </Box>
         </Box>
         <Copyright sx={{ mt: 5 }} />
@@ -334,4 +376,4 @@ const SignUp = () => {
   );
 }
 
-export default SignUp;
+export default EditProfile;

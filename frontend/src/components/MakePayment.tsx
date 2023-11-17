@@ -29,7 +29,7 @@ const MakePayment: React.FC = () => {
         }
         
         const response = await fetch('http://localhost:5000/api/auth/users_iban', {
-            method: 'POST',
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
             },

@@ -234,7 +234,7 @@ def send_account_balance():
 
     return resposne, 200
 
-@api.route('/auth/users_iban', methods=['POST'])
+@api.route('/auth/users_iban', methods=['GET'])
 def send_users_iban():
     token = request.headers.get('Authorization').split(" ")[1]
     data, error, status = validate_jwt(token)
@@ -258,6 +258,37 @@ def send_users_iban():
     response = encode_response(rsa_public_key, users_info)
 
     return response, 200
+
+
+@api.route('/auth/get_user_data', methods=['GET'])
+def get_user_data():
+    token = request.headers.get('Authorization').split(" ")[1]
+
+    data, error, status = validate_jwt(token)
+    if error:
+        return jsonify(error), status
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    user_data = {
+        'firstname': user.firstname,
+        'lastname': user.lastname,
+        'email': user.email,
+        'addressLine1': user.addressLine1,
+        'addressLine2': user.addressLine2,
+        'city': user.city,
+        'state': user.state,
+        'zipCode': user.zipCode,
+        'telephone': user.telephone,
+    }
+
+    return jsonify(user_data), 200
 
 
 @api.route('/auth/make_payment', methods=['POST'])
@@ -293,11 +324,9 @@ def make_payment():
         return jsonify({'message': 'Insufficient funds'}), 400
 
     try:
-        # Update account balances
         sender.account_balance -= amount
         recipient.account_balance += amount
 
-        # Create a new transaction record
         transaction = Transaction(amount=amount, sender_id=sender.id, recipient_id=recipient.id)
         db.session.add(transaction)
 
@@ -307,3 +336,40 @@ def make_payment():
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': 'Error processing payment: ' + str(e)}), 500
+    
+
+@api.route('/auth/update_user', methods=['PUT'])
+def update_user():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return jsonify(error), status
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    user_data = request.get_json()
+    if not user_data:
+        return jsonify({'message': 'No data provided'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    user.firstname = user_data.get('firstname', user.firstname)
+    user.lastname = user_data.get('lastname', user.lastname)
+    user.email = user_data.get('email', user.email)
+    user.addressLine1 = user_data.get('addressLine1', user.addressLine1)
+    user.addressLine2 = user_data.get('addressLine2', user.addressLine2)
+    user.city = user_data.get('city', user.city)
+    user.state = user_data.get('state', user.state)
+    user.zipCode = user_data.get('zipCode', user.zipCode)
+    user.telephone = user_data.get('telephone', user.telephone)
+
+    try:
+        db.session.commit()
+        return jsonify({'message': 'User updated successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': 'Error updating user', 'error': str(e)}), 500
