@@ -20,39 +20,58 @@ export function generateRSAKeyPair(): { publicKey: string; privateKey: string } 
     };
 }
 
+export interface DecipherResult {
+    success: boolean;
+    data?: Uint8Array;
+    error?: string;
+  }
+  
+
 export function decipher(
     cipherText: Uint8Array, 
     secretKey: Uint8Array, 
     iv: Uint8Array, 
     clientPrivateKeyPem: string
-): Uint8Array {
+): DecipherResult {
     const clientPrivateKey = forge.pki.privateKeyFromPem(clientPrivateKeyPem);
 
     const secretKeyBinary = String.fromCharCode.apply(null, Array.from(secretKey));
     const ivBinary = String.fromCharCode.apply(null, Array.from(iv));
 
-    const secretKeyDecrypted = clientPrivateKey.decrypt(secretKeyBinary, 'RSA-OAEP', {
-        md: forge.md.sha256.create(),
-        mgf1: {
-        md: forge.md.sha256.create()
-        }
-    });
-    const ivDecrypted = clientPrivateKey.decrypt(ivBinary, 'RSA-OAEP', {
-        md: forge.md.sha256.create(),
-        mgf1: {
-        md: forge.md.sha256.create()
-        }
-    });
+    try {
+        const secretKeyDecrypted = clientPrivateKey.decrypt(secretKeyBinary, 'RSA-OAEP', {
+            md: forge.md.sha256.create(),
+            mgf1: {
+            md: forge.md.sha256.create()
+            }
+        });
+        const ivDecrypted = clientPrivateKey.decrypt(ivBinary, 'RSA-OAEP', {
+            md: forge.md.sha256.create(),
+            mgf1: {
+            md: forge.md.sha256.create()
+            }
+        });
 
-    const secretKeyDecryptedBytes = secretKeyDecrypted;
-    const ivDecryptedBytes = ivDecrypted;
+        const secretKeyDecryptedBytes = secretKeyDecrypted;
+        const ivDecryptedBytes = ivDecrypted;
 
-    const cipher = forge.cipher.createDecipher('AES-CTR', forge.util.createBuffer(secretKeyDecryptedBytes));
-    cipher.start({iv: forge.util.createBuffer(ivDecryptedBytes)});
-    cipher.update(forge.util.createBuffer(cipherText));
-    cipher.finish();
+        const cipher = forge.cipher.createDecipher('AES-CTR', forge.util.createBuffer(secretKeyDecryptedBytes));
+        cipher.start({iv: forge.util.createBuffer(ivDecryptedBytes)});
+        cipher.update(forge.util.createBuffer(cipherText));
+        cipher.finish();
 
-    const decryptedBytes = cipher.output.getBytes();
+        const decryptedBytes = cipher.output.getBytes();
 
-    return new Uint8Array(forge.util.binary.raw.decode(decryptedBytes));
+        return {
+            success: true,
+            data: new Uint8Array(forge.util.binary.raw.decode(decryptedBytes))
+        };
+
+    } catch (error) {
+        console.error("Decryption error:", error);
+        return {
+            success: false,
+            error: "Decryption failed. The private key may be incorrect or corrupt."
+        };
+    }   
 }

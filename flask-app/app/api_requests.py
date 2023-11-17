@@ -1,10 +1,9 @@
 import json, base64, datetime, jwt
 from flask import current_app as app, Blueprint, jsonify, request
-from database_model import Customer, User
+from database_model import Customer, Transaction, User
 from cipher import encrypt
 from extensions import db, cache
 from functions import check_integrity, check_password_strength, validate_jwt, salted_hash, check_salted_hash, encode_response, generate_unique_iban
-from cryptography.hazmat.primitives import serialization
 
 
 api = Blueprint('api', __name__)
@@ -198,7 +197,7 @@ def save_rsa_key():
 
     return jsonify({'message': 'RSA key saved successfully'}), 200
 
-@api.route('/auth/account_balance', methods=['POST'])
+@api.route('/auth/account_balance', methods=['GET'])
 def send_account_balance():
     token = request.headers.get('Authorization').split(" ")[1]
     data, error, status = validate_jwt(token)
@@ -212,3 +211,76 @@ def send_account_balance():
 
     return resposne, 200
 
+@api.route('/auth/users_iban', methods=['POST'])
+def send_users_iban():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return error, status
+
+    user_id = data.get('user_id')
+
+    requesting_user = User.query.get(user_id)
+    if not requesting_user:
+        return jsonify({'message': 'Requesting user not found'}), 404
+
+    users = User.query.filter(User.id != user_id).all()
+
+    users_info = [
+        {"firstname": user.firstname, "lastname": user.lastname, "iban": user.iban}
+        for user in users
+    ]
+
+    rsa_public_key = requesting_user.rsa_public_key.encode('utf-8')
+    response = encode_response(rsa_public_key, users_info)
+
+    return response, 200
+
+
+@api.route('/auth/make_payment', methods=['POST'])
+def make_payment():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return error, status
+
+    user_id = data.get('user_id')
+    sender = User.query.get(user_id)
+    if not sender:
+        return jsonify({'message': 'Sender not found'}), 404
+
+    body = request.get_json()
+    recipient_iban = body.get('iban')
+    amount = body.get('amount')
+
+    if not recipient_iban or not amount:
+        return jsonify({'message': 'Missing iban or amount'}), 400
+
+    if sender.iban == recipient_iban:
+        return jsonify({'message': 'Cannot transfer to own account'}), 400
+
+    if amount <= 0:
+        return jsonify({'message': 'Invalid amount'}), 400
+
+    recipient = User.query.filter_by(iban=recipient_iban).first()
+    if not recipient:
+        return jsonify({'message': 'Recipient IBAN not found'}), 404
+
+    if sender.account_balance < amount:
+        return jsonify({'message': 'Insufficient funds'}), 400
+
+    try:
+        # Update account balances
+        sender.account_balance -= amount
+        recipient.account_balance += amount
+
+        # Create a new transaction record
+        transaction = Transaction(amount=amount, sender_id=sender.id, recipient_id=recipient.id)
+        db.session.add(transaction)
+
+        db.session.commit()
+        return jsonify({'message': 'Payment successful'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': 'Error processing payment: ' + str(e)}), 500

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { check_private_RSA_validity, check_public_RSA_validity, decipher, generateRSAKeyPair } from '../utils/cipher';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Box, Button, Container, Typography, Table, TableBody, TableCell, TableHead, TableRow, TextField, Paper, Alert } from '@mui/material';
 import { Lock, Person, ExitToApp } from '@mui/icons-material';
 import AlertDialog from './AlertDialog';
@@ -12,6 +12,8 @@ const InternetBanking: React.FC = () => {
   const [privateKey, setPrivateKey] = useState<string>('');
   const [showPrivateKeyInput, setShowPrivateKeyInput] = useState<boolean>(false);
   const [showRsaKeyInput, setShowRsaKeyInput] = useState<boolean>(false);
+  const [privateRsaKey, setPrivateRsaKey] = useState<string>('');
+  const [showPrivateRsaKeyInput, setShowPrivateRsaKeyInput] = useState<boolean>(false);
   const [rsaKey, setRsaKey] = useState<string>('');
   const [open, setOpen] = useState(false);
   const [alertText, setAlertText] = useState('');
@@ -39,6 +41,27 @@ const InternetBanking: React.FC = () => {
     setGeneratedKeys(keys);
   }
 
+  const handleSavePrivateRsaKey = () => {
+    try {
+      check_private_RSA_validity(privateRsaKey)
+    } catch (error: any) {
+      setAlertText("The provided private RSA key has invalid format");
+      setOpen(true);
+      console.error("An error occurred while saving Private RSA Key:", error);
+      return;
+    }
+
+    localStorage.setItem('privateRsaKey', privateRsaKey);
+    setSuccessAlert(true);
+    setSuccessAlertText('Private RSA Key saved successfully!');
+    setPrivateRsaKey('');
+    setShowPrivateRsaKeyInput(false);
+  };
+
+  const togglePrivateRsaKeyInput = () => {
+    setShowPrivateRsaKeyInput(!showPrivateRsaKeyInput);
+  };
+
   const handleUploadRsaKey = async () => {
     const token = localStorage.getItem('token');
 
@@ -62,16 +85,16 @@ const InternetBanking: React.FC = () => {
         setOpen(true)
         return
       }
-      console.log("RSA Key uploaded successfully:", result);
+      console.log("Public RSA Key uploaded successfully:", result);
       setRsaKey('');
       setShowRsaKeyInput(false);
 
-      setSuccessAlertText('RSA key uploaded successfully!')
+      setSuccessAlertText('Public RSA key uploaded successfully!')
       setSuccessAlert(true)
     } catch (error: any) {
       setAlertText("The provided public RSA key has invalid format");
       setOpen(true);
-      console.error("An error occurred while uploading RSA Key:", error);
+      console.error("An error occurred while uploading public RSA Key:", error);
     }
   };
 
@@ -117,7 +140,13 @@ const InternetBanking: React.FC = () => {
 
       const decryptedBytes = decipher(textBytes, secretKeyBytes, ivBytes, privateKey);
 
-      const decryptedText = new TextDecoder().decode(decryptedBytes);
+      if (!decryptedBytes.success) {
+        setOpen(true);
+        setAlertText(decryptedBytes.error || 'An error occurred while decrypting the data');
+        return;
+    }
+
+      const decryptedText = new TextDecoder().decode(decryptedBytes.data);
       setData(JSON.parse(decryptedText));
 
       setPrivateKey('');
@@ -163,6 +192,15 @@ const InternetBanking: React.FC = () => {
         </Typography>
 
         <Box sx={{ mt: 2 }}>
+          <Link to="/makepayment" style={{ textDecoration: 'none' }}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              sx={{ margin: '1em', width: '500px' }}
+            >
+              Make Payment
+            </Button>
+          </Link>
           <Button 
             variant="contained" 
             color="success" 
@@ -196,6 +234,35 @@ const InternetBanking: React.FC = () => {
           <Button 
             variant="contained" 
             color="secondary" 
+            onClick={togglePrivateRsaKeyInput} 
+            sx={{ margin: '1em', width: '500px' }}>
+            Save Private RSA Key
+          </Button>
+
+          {showPrivateRsaKeyInput && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '1em' }}>
+              <TextField
+                label="Private RSA Key"
+                variant="outlined"
+                fullWidth
+                multiline
+                rows={8}
+                value={privateRsaKey}
+                onChange={(e) => setPrivateRsaKey(e.target.value)}
+                sx={{ marginBottom: '1em' }}
+              />
+              <Button 
+                variant="contained" 
+                color="primary" 
+                onClick={handleSavePrivateRsaKey} 
+                fullWidth>
+                Save
+              </Button>
+            </Box>
+          )}
+          {/* <Button 
+            variant="contained" 
+            color="secondary" 
             onClick={fetchWithoutEncryption} 
             sx={{ margin: '1em', width: '500px' }}
             >
@@ -226,7 +293,7 @@ const InternetBanking: React.FC = () => {
               Go
             </Button>
           </Box>
-        )}
+        )} */}
 
         <Button 
             variant="outlined" 

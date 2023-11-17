@@ -1,3 +1,4 @@
+import datetime
 from extensions import db
 
 class Customer(db.Model):
@@ -19,15 +20,11 @@ class Customer(db.Model):
 class Transaction(db.Model):
     __tablename__ = 'transactions'
     id = db.Column(db.Integer, primary_key=True)
-    sum = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime)
-    users = db.relationship('User', secondary='user_transaction_association', back_populates='transactions')
-
-class UserTransactionAssociation(db.Model):
-    __tablename__ = 'user_transaction_association'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'))
+    amount = db.Column(db.Integer, nullable=False)  # Renamed from 'sum' to 'amount'
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -41,7 +38,9 @@ class User(db.Model):
     rsa_public_key = db.Column(db.String(2048), nullable=True)
     iban = db.Column(db.String(13))
     account_balance = db.Column(db.Integer,nullable=False)
-    transactions = db.relationship('Transaction', secondary='user_transaction_association', back_populates='users', cascade='all, delete-orphan', single_parent=True)
+    sent_transactions = db.relationship('Transaction', foreign_keys='Transaction.sender_id')
+    received_transactions = db.relationship('Transaction', foreign_keys='Transaction.recipient_id')
+
     def __init__(self, firstname, lastname, email, salt, hash_pass, iban):
         self.firstname = firstname
         self.lastname = lastname

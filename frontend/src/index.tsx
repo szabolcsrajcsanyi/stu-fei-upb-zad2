@@ -11,6 +11,7 @@ import SignUp from './components/SignUp';
 import InternetBanking from './components/InternetBanking';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import MakePayment from './components/MakePayment';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 
@@ -21,6 +22,7 @@ root.render(
       <Route path="/login" element={<PublicRoute><SignIn /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><SignUp /></PublicRoute>} />
       <Route path="/internetbanking" element={<ProtectedRoute><InternetBanking /></ProtectedRoute>} />
+      <Route path="/makepayment" element={<ProtectedRoute><MakePayment /></ProtectedRoute>} />
     </Routes>
   </Router>
 );
