@@ -30,14 +30,14 @@ services:
       - FLASK_RUN_HOST=0.0.0.0
       - DB_HOST=db
 
-  fe:
-    build: ./frontend
-    ports:
-      - 3000:3000
-    depends_on:
-      - be
-
-  # init-data:
-  #   build: ./init-data
+  # fe:
+  #   build: ./frontend
+  #   ports:
+  #     - 3000:3000
   #   depends_on:
   #     - be
+
+  init-data:
+    build: ./init-data
+    depends_on:
+      - be

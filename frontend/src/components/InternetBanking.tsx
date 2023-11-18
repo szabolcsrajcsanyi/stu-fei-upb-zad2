@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { check_private_RSA_validity, check_public_RSA_validity, decipher, generateRSAKeyPair } from '../utils/cipher';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Button, Container, Typography, Table, TableBody, TableCell, TableHead, TableRow, TextField, Paper, Alert } from '@mui/material';
 import { Lock, Person, ExitToApp } from '@mui/icons-material';
 import AlertDialog from './AlertDialog';
+import jsPDF from 'jspdf';
+
+interface Transaction {
+  id: number;
+  amount: number;
+  sender_name: string;
+  recipient_name: string;
+  timestamp: string;
+}
+
 
 const InternetBanking: React.FC = () => {
   const navigate = useNavigate();
+  const [accountBalance, setAccountBalance] = useState<string>('');
   const [generatedKeys, setGeneratedKeys] = useState<{ publicKey: string, privateKey: string } | null>(null);
   const [data, setData] = useState<any[]>([]);
   const [privateKey, setPrivateKey] = useState<string>('');
@@ -19,6 +30,63 @@ const InternetBanking: React.FC = () => {
   const [alertText, setAlertText] = useState('');
   const [successAlert, setSuccessAlert] = useState(false);
   const [successAlertText, setSuccessAlertText] = useState('');
+
+  useEffect(() => {
+    const fetchAccountBalance = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setOpen(true);
+        setAlertText('You are not logged in');
+        navigate('/login');
+        return;
+      }
+      const privateRsaKey = localStorage.getItem('privateRsaKey');
+      if (!privateRsaKey) {
+          setOpen(true);
+          setAlertText('No RSA private key provided');
+          return;
+      }
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/account_balance', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          setOpen(true);
+          setAlertText(data.message);
+          return;
+        }
+
+        console.log(data);
+
+        const textBytes = Uint8Array.from(atob(data.text), c => c.charCodeAt(0));
+        const secretKeyBytes = Uint8Array.from(atob(data.secret_key), c => c.charCodeAt(0));
+        const ivBytes = Uint8Array.from(atob(data.iv), c => c.charCodeAt(0));
+
+        const decryptedBytes = decipher(textBytes, secretKeyBytes, ivBytes, privateRsaKey);
+
+        if (!decryptedBytes.success) {
+          setOpen(true);
+          setAlertText(decryptedBytes.error || 'An error occurred while decrypting the data');
+          return;
+        }
+        
+        const decryptedText = new TextDecoder().decode(decryptedBytes.data);
+        const balance = JSON.parse(decryptedText);
+
+        setAccountBalance(balance);
+      } catch (error) {
+        console.error('Error fetching account balance:', error);
+        setOpen(true);
+        setAlertText('Failed to fetch account balance');
+      }
+    }
+    fetchAccountBalance();
+  }, []);
   
 
   const handleLogout = () => {
@@ -163,12 +231,86 @@ const InternetBanking: React.FC = () => {
     }
   };
 
+  const fetchPdfData = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        setOpen(true);
+        setAlertText('You are not logged in');
+        return;
+    }
+    const privateRsaKey = localStorage.getItem('privateRsaKey');
+    if (!privateRsaKey) {
+        setOpen(true);
+        setAlertText('No RSA private key provided');
+        return;
+    }
+
+    try {
+        const response = await fetch('http://localhost:5000/api/auth/get_transactions', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            setOpen(true);
+            setAlertText(data.message);
+            return;
+        }
+
+        console.log(data);
+
+        const textBytes = Uint8Array.from(atob(data.text), c => c.charCodeAt(0));
+        const secretKeyBytes = Uint8Array.from(atob(data.secret_key), c => c.charCodeAt(0));
+        const ivBytes = Uint8Array.from(atob(data.iv), c => c.charCodeAt(0));
+
+        const decryptedBytes = decipher(textBytes, secretKeyBytes, ivBytes, privateRsaKey);
+
+        if (!decryptedBytes.success) {
+            setOpen(true);
+            setAlertText(decryptedBytes.error || 'An error occurred while decrypting the data');
+            return;
+        }
+        
+        const decryptedText = new TextDecoder().decode(decryptedBytes.data);
+        const transactions = JSON.parse(decryptedText);
+
+        const doc = new jsPDF();
+        let y = 10;
+
+        transactions.forEach((transaction: Transaction) => {
+          doc.text(`ID: ${transaction.id}`, 10, y); y += 6;
+          doc.text(`Amount: ${transaction.amount}`, 10, y); y += 6;
+          doc.text(`Sender: ${transaction.sender_name}`, 10, y); y += 6;
+          doc.text(`Recipient: ${transaction.recipient_name}`, 10, y); y += 6;
+          doc.text(`Date: ${transaction.timestamp}`, 10, y); y += 10; // Add extra space before next transaction
+
+          if (y > 280) { // Check to add a new page
+            doc.addPage();
+            y = 10;
+          }
+        });
+
+        doc.save("transactions.pdf");
+
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setOpen(true);
+      setAlertText('Failed to generate PDF');
+    }
+    
+};
+
   return (
     <Container
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        py: 5,
+        // height: '150vh',
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#f4f4f4',
@@ -191,6 +333,13 @@ const InternetBanking: React.FC = () => {
           <Person fontSize="inherit" /> Welcome to the most secure and user-friendly internet banking experience.
         </Typography>
 
+        <Typography component="p" variant="h4" color="primary">
+          Account balance:{" "}
+          <span style={{ color: 'green' }}>
+            {accountBalance} $
+          </span>
+        </Typography>
+
         <Box sx={{ mt: 2 }}>
           <Link to="/makepayment" style={{ textDecoration: 'none' }}>
             <Button 
@@ -201,6 +350,15 @@ const InternetBanking: React.FC = () => {
               Make Payment
             </Button>
           </Link>
+          <Link to="/accountbalance" style={{ textDecoration: 'none' }}>
+            <Button 
+              variant="outlined" 
+              color="error" 
+              sx={{ margin: '1em', width: '500px' }}
+            >
+              Account balance
+            </Button>
+          </Link>
           <Link to="/editprofile" style={{ textDecoration: 'none' }}>
             <Button 
               variant="outlined" 
@@ -208,6 +366,23 @@ const InternetBanking: React.FC = () => {
               sx={{ margin: '1em', width: '500px' }}
             >
               Update profile
+            </Button>
+          </Link>
+          <Button 
+              variant="outlined" 
+              color="secondary"
+              onClick={fetchPdfData}
+              sx={{ margin: '1em', width: '500px' }}
+            >
+              Account statement
+            </Button>
+          <Link to="/addfunds" style={{ textDecoration: 'none' }}>
+            <Button 
+              variant="outlined" 
+              color="warning" 
+              sx={{ margin: '1em', width: '500px' }}
+            >
+              Add amount
             </Button>
           </Link>
           <Button 

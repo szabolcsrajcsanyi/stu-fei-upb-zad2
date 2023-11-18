@@ -1,4 +1,9 @@
 import json, base64, datetime, jwt
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from base64 import b64encode
+from sqlalchemy.orm import aliased
+from io import BytesIO
 from flask import current_app as app, Blueprint, jsonify, request
 from database_model import Customer, Transaction, User
 from cipher import encrypt
@@ -8,6 +13,25 @@ from functions import check_integrity, check_password_strength, validate_jwt, sa
 
 api = Blueprint('api', __name__)
 
+@api.route("/v1", methods=['GET'])
+def index():
+    return jsonify({'message': 'API Up and Running!'}), 200
+
+@api.route('/ibans', methods=['GET'])
+def ibans():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return jsonify(error), status
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    users = User.query.filter(User.id != user_id).all()
+    ibans_list = [user.iban for user in users if user.iban]
+
+    return jsonify({'ibans': ibans_list}), 200
 
 @api.route('/customers', methods=['GET'])
 def customers():
@@ -70,22 +94,8 @@ def auth_customers():
         customer_dict['Surname'] = customer.surname
         customer_dict['IBAN'] = customer.iban
         customers_list.append(customer_dict)
-
-    encoded_plaintext = json.dumps(customers_list).encode('utf-8')
-    plaintext_checksum = check_integrity(encoded_plaintext)
-
-    cipher_text, secret_key_encrypted, iv_encrypted = encrypt(encoded_plaintext, rsa_public_key)
-
-    cipher_text_base64 = base64.b64encode(cipher_text).decode('utf-8')
-    secret_key_encrypted_base64 = base64.b64encode(secret_key_encrypted).decode('utf-8')
-    iv_encrypted_base64 = base64.b64encode(iv_encrypted).decode('utf-8')
-    checksum_base64 = base64.b64encode(plaintext_checksum).decode('utf-8')
-
-    response_json = dict()
-    response_json['text'] = cipher_text_base64
-    response_json['secret_key'] = secret_key_encrypted_base64
-    response_json['iv'] = iv_encrypted_base64
-    response_json['checksum'] = checksum_base64
+    
+    response_json = encode_response(rsa_public_key, customers_list)
 
     return response_json, 200
 
@@ -229,6 +239,12 @@ def send_account_balance():
 
     user_id = data.get('user_id')
     user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    
+    if not user.rsa_public_key:
+        return jsonify({'message': 'RSA public key not found'}), 404
+    
     rsa_public_key = user.rsa_public_key.encode('utf-8')
     resposne = encode_response(rsa_public_key, user.account_balance)
 
@@ -275,6 +291,9 @@ def get_user_data():
     user = User.query.get(user_id)
     if not user:
         return jsonify({'message': 'User not found'}), 404
+    
+    if not user.rsa_public_key:
+        return jsonify({'message': 'RSA public key not found'}), 404
 
     user_data = {
         'firstname': user.firstname,
@@ -288,7 +307,11 @@ def get_user_data():
         'telephone': user.telephone,
     }
 
-    return jsonify(user_data), 200
+    rsa_public_key = user.rsa_public_key.encode('utf-8')
+
+    response_json = encode_response(rsa_public_key, user_data)
+
+    return response_json, 200
 
 
 @api.route('/auth/make_payment', methods=['POST'])
@@ -373,3 +396,130 @@ def update_user():
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': 'Error updating user', 'error': str(e)}), 500
+    
+
+@api.route('/auth/get_transactions', methods=['GET'])
+def get_transactions():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return jsonify(error), status
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    
+    if not user.rsa_public_key:
+        return jsonify({'message': 'RSA public key not found'}), 404
+
+    Sender = aliased(User, name='sender')
+    Recipient = aliased(User, name='recipient')
+
+    transactions = db.session.query(
+            Transaction,
+            Sender.firstname.label("sender_firstname"),
+            Sender.lastname.label("sender_lastname"),
+            Recipient.firstname.label("recipient_firstname"),
+            Recipient.lastname.label("recipient_lastname")
+        ).join(Sender, Sender.id == Transaction.sender_id) \
+        .join(Recipient, Recipient.id == Transaction.recipient_id) \
+        .filter((Transaction.sender_id == user_id) | (Transaction.recipient_id == user_id)) \
+        .all()
+
+    transactions_data = [
+        {
+            "id": transaction.id,
+            "amount": transaction.amount,
+            "sender_name": f"{sender_firstname} {sender_lastname}",
+            "recipient_name": f"{recipient_firstname} {recipient_lastname}",
+            "timestamp": transaction.timestamp.isoformat(),
+        } for transaction, sender_firstname, sender_lastname, recipient_firstname, recipient_lastname in transactions
+    ]
+
+
+    rsa_public_key = user.rsa_public_key.encode('utf-8')
+
+    response_json = encode_response(rsa_public_key, transactions_data)
+
+    return response_json, 200
+
+
+@api.route('/auth/add_balance', methods=['POST'])
+def add_balance():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return jsonify(error), status
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    try:
+        amount_to_add = request.get_json().get('amount')
+        if not amount_to_add or amount_to_add <= 0:
+            raise ValueError('Invalid amount')
+        amount_to_add = float(amount_to_add)
+    except (ValueError, TypeError):
+        return jsonify({'message': 'Invalid amount specified'}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    try:
+        user.account_balance += amount_to_add
+        db.session.commit()
+        return jsonify({'message': 'Balance updated successfully', 'new_balance': user.account_balance}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': 'Error updating balance', 'error': str(e)}), 500
+    
+
+@api.route('/auth/user/transactions', methods=['GET'])
+def user_transactions():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return jsonify(error), status
+
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User ID not found in token'}), 400
+
+    transactions = Transaction.query.filter(
+        (Transaction.sender_id == user_id) | (Transaction.recipient_id == user_id)
+    ).all()
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    
+    if not user.rsa_public_key:
+        return jsonify({'message': 'RSA public key not found'}), 404
+
+    account_balance = user.account_balance  
+
+    transactions_data = []
+    for transaction in transactions:
+        transaction_type = 'sent' if transaction.sender_id == user_id else 'received'
+        transactions_data.append({
+            'amount': transaction.amount,
+            'type': transaction_type,
+            'date': transaction.timestamp.isoformat()
+        })
+    
+    trans_list = {
+        'account_balance': account_balance,
+        'transactions': transactions_data
+    }
+
+    rsa_public_key = user.rsa_public_key.encode('utf-8')
+
+    response_json = encode_response(rsa_public_key, trans_list)
+
+    return response_json, 200
