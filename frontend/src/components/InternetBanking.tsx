@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { check_private_RSA_validity, check_public_RSA_validity, decipher, generateRSAKeyPair } from '../utils/cipher';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box, Button, Container, Typography, Table, TableBody, TableCell, TableHead, TableRow, TextField, Paper, Alert } from '@mui/material';
+import { Box, Button, Container, Typography, TextField, Paper, Alert } from '@mui/material';
 import { Lock, Person, ExitToApp } from '@mui/icons-material';
 import AlertDialog from './AlertDialog';
 import jsPDF from 'jspdf';
@@ -17,11 +17,7 @@ interface Transaction {
 
 const InternetBanking: React.FC = () => {
   const navigate = useNavigate();
-  const [accountBalance, setAccountBalance] = useState<string>('');
   const [generatedKeys, setGeneratedKeys] = useState<{ publicKey: string, privateKey: string } | null>(null);
-  const [data, setData] = useState<any[]>([]);
-  const [privateKey, setPrivateKey] = useState<string>('');
-  const [showPrivateKeyInput, setShowPrivateKeyInput] = useState<boolean>(false);
   const [showRsaKeyInput, setShowRsaKeyInput] = useState<boolean>(false);
   const [privateRsaKey, setPrivateRsaKey] = useState<string>('');
   const [showPrivateRsaKeyInput, setShowPrivateRsaKeyInput] = useState<boolean>(false);
@@ -30,76 +26,13 @@ const InternetBanking: React.FC = () => {
   const [alertText, setAlertText] = useState('');
   const [successAlert, setSuccessAlert] = useState(false);
   const [successAlertText, setSuccessAlertText] = useState('');
-
-  useEffect(() => {
-    const fetchAccountBalance = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setOpen(true);
-        setAlertText('You are not logged in');
-        navigate('/login');
-        return;
-      }
-      const privateRsaKey = localStorage.getItem('privateRsaKey');
-      if (!privateRsaKey) {
-          setOpen(true);
-          setAlertText('No RSA private key provided');
-          return;
-      }
-      try {
-        const response = await fetch('http://localhost:5000/api/auth/account_balance', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-
-        if (!response.ok) {
-          setOpen(true);
-          setAlertText(data.message);
-          return;
-        }
-
-        console.log(data);
-
-        const textBytes = Uint8Array.from(atob(data.text), c => c.charCodeAt(0));
-        const secretKeyBytes = Uint8Array.from(atob(data.secret_key), c => c.charCodeAt(0));
-        const ivBytes = Uint8Array.from(atob(data.iv), c => c.charCodeAt(0));
-
-        const decryptedBytes = decipher(textBytes, secretKeyBytes, ivBytes, privateRsaKey);
-
-        if (!decryptedBytes.success) {
-          setOpen(true);
-          setAlertText(decryptedBytes.error || 'An error occurred while decrypting the data');
-          return;
-        }
-        
-        const decryptedText = new TextDecoder().decode(decryptedBytes.data);
-        const balance = JSON.parse(decryptedText);
-
-        setAccountBalance(balance);
-      } catch (error) {
-        console.error('Error fetching account balance:', error);
-        setOpen(true);
-        setAlertText('Failed to fetch account balance');
-      }
-    }
-    fetchAccountBalance();
-  }, []);
   
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
-
-  const handleClearTable = () => {
-    setData([]);
-    setSuccessAlert(true);
-    setSuccessAlertText("Customers' list has been cleared!")
-  }
-
+  
   const clearRSAkeyPair = () => {
     setGeneratedKeys(null)
   }
@@ -166,70 +99,6 @@ const InternetBanking: React.FC = () => {
     }
   };
 
-  const fetchWithoutEncryption = async () => {
-    const response = await fetch('http://localhost:5000/api/customers');
-    const result = await response.json();
-    console.log(result)
-    setData(result);
-    setShowPrivateKeyInput(false);
-    setSuccessAlertText('Customers fetched without encryption successfully!')
-    setSuccessAlert(true)
-  };
-
-  const toggleEncryptionInput = () => {
-    setShowPrivateKeyInput(!showPrivateKeyInput);
-  };
-
-  const fetchWithEncryption = async () => {
-    if (!privateKey) {
-      alert('Please enter the private RSA key');
-      return;
-    }
-
-    const token = localStorage.getItem('token');
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/customers', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const result = await response.json();
-
-      if (!response.ok) {
-        setAlertText(result.message)
-        setOpen(true)
-        return;
-      }
-      console.log(result)
-
-      const textBytes = Uint8Array.from(atob(result.text), c => c.charCodeAt(0));
-      const secretKeyBytes = Uint8Array.from(atob(result.secret_key), c => c.charCodeAt(0));
-      const ivBytes = Uint8Array.from(atob(result.iv), c => c.charCodeAt(0));
-
-      const decryptedBytes = decipher(textBytes, secretKeyBytes, ivBytes, privateKey);
-
-      if (!decryptedBytes.success) {
-        setOpen(true);
-        setAlertText(decryptedBytes.error || 'An error occurred while decrypting the data');
-        return;
-    }
-
-      const decryptedText = new TextDecoder().decode(decryptedBytes.data);
-      setData(JSON.parse(decryptedText));
-
-      setPrivateKey('');
-      setShowPrivateKeyInput(false);
-
-      setSuccessAlertText('Customers fetched with encryption successfully!')
-      setSuccessAlert(true)
-
-    } catch (error: any) {
-        setAlertText('You provided the wrong private RSA key');
-        setOpen(true);
-        console.error("An error occurred during fetchWithEncryption:", error);
-
-    }
-  };
 
   const fetchPdfData = async () => {
     const token = localStorage.getItem('token');
@@ -310,7 +179,6 @@ const InternetBanking: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         py: 5,
-        // height: '150vh',
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#f4f4f4',
@@ -331,13 +199,6 @@ const InternetBanking: React.FC = () => {
         </Typography>
         <Typography variant="body1" gutterBottom>
           <Person fontSize="inherit" /> Welcome to the most secure and user-friendly internet banking experience.
-        </Typography>
-
-        <Typography component="p" variant="h4" color="primary">
-          Account balance:{" "}
-          <span style={{ color: 'green' }}>
-            {accountBalance} $
-          </span>
         </Typography>
 
         <Box sx={{ mt: 2 }}>
@@ -444,40 +305,6 @@ const InternetBanking: React.FC = () => {
               </Button>
             </Box>
           )}
-          {/* <Button 
-            variant="contained" 
-            color="secondary" 
-            onClick={fetchWithoutEncryption} 
-            sx={{ margin: '1em', width: '500px' }}
-            >
-            Get Customers (Without Encryption)
-          </Button>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            onClick={toggleEncryptionInput} 
-            sx={{ margin: '1em', width: '500px' }}
-            >
-            Get Customers (With Encryption)
-          </Button>
-
-        {showPrivateKeyInput && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '1em' }}>
-            <TextField
-              label="Private RSA Key"
-              variant="outlined"
-              fullWidth
-              multiline
-              rows={8}
-              value={privateKey}
-              onChange={(e) => setPrivateKey(e.target.value)}
-              sx={{ marginBottom: '1em' }}
-            />
-            <Button variant="contained" color="primary" onClick={fetchWithEncryption} fullWidth>
-              Go
-            </Button>
-          </Box>
-        )} */}
 
         <Button 
             variant="outlined" 
@@ -526,49 +353,13 @@ const InternetBanking: React.FC = () => {
         )}
 
         </Box>
-
-
-        {data.length > 0 && (
-          <Table sx={{ mt: 3 }}>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>First Name</TableCell>
-                <TableCell>Last Name</TableCell>
-                <TableCell>IBAN</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.map((item) => (
-                <TableRow key={item.ID}>
-                  <TableCell>{item.ID}</TableCell>
-                  <TableCell>{item.Name}</TableCell>
-                  <TableCell>{item.Surname}</TableCell>
-                  <TableCell>{item.IBAN}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-
         <Box display="flex" justifyContent="center" sx={{ mt: 3 }}>
-            <Button
-                variant="contained"
-                color="warning"
-                onClick={handleClearTable}
-                sx={{ margin: '1em', width: '200px' }}
-            >
-                Clear Table
-            </Button>
-
-            <Box sx={{ mx: 7 }}></Box>
-
             <Button
                 variant="contained"
                 color="error"
                 startIcon={<ExitToApp />}
                 onClick={(handleLogout)}
-                sx={{ margin: '1em', width: '200px' }}
+                sx={{ margin: '1em'}}
             >
                 Log Out
             </Button>

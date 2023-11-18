@@ -10,7 +10,6 @@ services:
       - POSTGRES_DB=test
     volumes:
       - ./initdb-scripts:/docker-entrypoint-initdb.d
-#      - ./postgres-data/postgres:/var/lib/postgresql/data
     ports:
       - 5433:5432
   
@@ -30,12 +29,12 @@ services:
       - FLASK_RUN_HOST=0.0.0.0
       - DB_HOST=db
 
-  # fe:
-  #   build: ./frontend
-  #   ports:
-  #     - 3000:3000
-  #   depends_on:
-  #     - be
+  fe:
+    build: ./frontend
+    ports:
+      - 3000:3000
+    depends_on:
+      - be
 
   init-data:
     build: ./init-data
