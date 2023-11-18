@@ -38,7 +38,6 @@ const EditProfile = () => {
   const [alertText, setAlertText] = React.useState('');
   const [successAlert, setSuccessAlert] = useState(false);
   const [successAlertText, setSuccessAlertText] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserData = async () => {

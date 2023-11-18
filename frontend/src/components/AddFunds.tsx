@@ -6,7 +6,6 @@ import CssBaseline from '@mui/material/CssBaseline';
 import TextField from '@mui/material/TextField';
 import Link from '@mui/material/Link';
 import Box from '@mui/material/Box';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
@@ -18,7 +17,6 @@ import { Alert } from '@mui/material';
 const defaultTheme = createTheme();
 
 const AddFunds = () => {
-  const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
   const [alertText, setAlertText] = React.useState('');
   const [successAlert, setSuccessAlert] = React.useState(false);

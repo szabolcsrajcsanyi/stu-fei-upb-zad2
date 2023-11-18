@@ -1,7 +1,7 @@
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import Copyright from './Copyright';
-import { Alert, Box, Button, Grid, Paper, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Box, Button, Grid, Paper, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import { useEffect, useState } from 'react';
 import AlertDialog from './AlertDialog';
 import { decipher } from '../utils/cipher';

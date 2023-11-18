@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Slide, Typography, styled } from "@mui/material";
+import { Button, Dialog, DialogActions, DialogTitle, Slide, Typography, styled } from "@mui/material";
 import { TransitionProps } from "@mui/material/transitions";
 
 const Transition = React.forwardRef(function Transition(
