@@ -14,6 +14,7 @@ import Copyright from './Copyright';
 import AlertDialog from './AlertDialog';
 import { isValidCityStateName, isValidEmail, isValidName, isValidPhoneNumber, isValidPostalCode } from '../utils/validation';
 import { Alert } from '@mui/material';
+import {decipher} from "../utils/cipher";
 
 const defaultTheme = createTheme();
 
@@ -47,8 +48,8 @@ const EditProfile = () => {
                 setAlertText('You are not logged in');
                 return;
             }
-            const rsaKey = localStorage.getItem('privateRsaKey');
-            if (!rsaKey) {
+            const privateRsaKey = localStorage.getItem('privateRsaKey');
+            if (!privateRsaKey) {
                 setOpen(true);
                 setAlertText('No RSA private key provided');
                 return;
@@ -61,16 +62,40 @@ const EditProfile = () => {
                 },
             });
             const data = await response.json();
+
+            if (!response.ok) {
+                setOpen(true);
+                setAlertText(data.message);
+                return;
+            }
+
             console.log(data)
-            setFirstName(data.firstname);
-            setLastName(data.lastname);
-            setEmail(data.email);
-            setAddressLine1(data.addressLine1);
-            setAddressLine2(data.addressLine2);
-            setCity(data.city);
-            setState(data.state);
-            setPostalCode(data.zipCode);
-            setTelephone(data.telephone);
+
+
+            const textBytes = Uint8Array.from(atob(data.text), c => c.charCodeAt(0));
+            const secretKeyBytes = Uint8Array.from(atob(data.secret_key), c => c.charCodeAt(0));
+            const ivBytes = Uint8Array.from(atob(data.iv), c => c.charCodeAt(0));
+
+            const decryptedBytes = decipher(textBytes, secretKeyBytes, ivBytes, privateRsaKey);
+
+            if (!decryptedBytes.success) {
+                setOpen(true);
+                setAlertText(decryptedBytes.error || 'An error occurred while decrypting the data');
+                return;
+            }
+
+        const decryptedText = new TextDecoder().decode(decryptedBytes.data);
+        const userprofile = JSON.parse(decryptedText);
+
+            setFirstName(userprofile.firstname);
+            setLastName(userprofile.lastname);
+            setEmail(userprofile.email);
+            setAddressLine1(userprofile.addressLine1);
+            setAddressLine2(userprofile.addressLine2);
+            setCity(userprofile.city);
+            setState(userprofile.state);
+            setPostalCode(userprofile.zipCode);
+            setTelephone(userprofile.telephone);
     };
 
     fetchUserData();
