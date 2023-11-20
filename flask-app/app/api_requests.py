@@ -543,7 +543,7 @@ def get_user_by_name():
 
     if not user.rsa_public_key:
         return jsonify({'message': 'RSA public key not found'}), 404
-    users_found = User.query.filter(or_(User.firstname.like(f"%{full_name}%"), User.lastname.like(f"%{full_name}%"))).all()
+    users_found = User.query.filter(or_((User.firstname + ' ' + User.lastname).like(f"%{full_name}%"))).all()
     response_users_found = {
         'results': []
     }
