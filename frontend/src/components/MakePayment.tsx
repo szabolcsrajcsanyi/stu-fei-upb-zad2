@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Container, Paper, TextField, Table, TableBody, TableCell, TableHead, TableRow, Typography, Alert } from '@mui/material';
+import { Box, Button, Container, Paper, TextField, Table, TableBody, TableCell, TableHead, TableRow, Typography, Alert, Autocomplete, InputAdornment } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { decipher } from '../utils/cipher';
 import AlertDialog from './AlertDialog';
 import { Link } from 'react-router-dom';
@@ -12,6 +13,7 @@ const MakePayment: React.FC = () => {
   const [alertText, setAlertText] = useState('');
   const [successAlert, setSuccessAlert] = useState(false);
   const [successAlertText, setSuccessAlertText] = useState('');
+  const [userQuery, setUserQuery] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,13 +30,25 @@ const MakePayment: React.FC = () => {
             return;
         }
         
-        const response = await fetch('http://localhost:5000/api/auth/users_iban', {
-            method: 'GET',
+        const response = await fetch('http://localhost:5000/api/auth/get_by_name', {
+            method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
+            body: JSON.stringify({
+              query: userQuery
+            })
         });
         const data = await response.json();
+
+        if (!response.ok) {
+          setAlertText(data.message)
+          setOpen(true)
+          return
+        }
+
+        console.log(data);
         const textBytes = Uint8Array.from(atob(data.text), c => c.charCodeAt(0));
         const secretKeyBytes = Uint8Array.from(atob(data.secret_key), c => c.charCodeAt(0));
         const ivBytes = Uint8Array.from(atob(data.iv), c => c.charCodeAt(0));
@@ -48,11 +62,13 @@ const MakePayment: React.FC = () => {
         }
 
         const decryptedText = new TextDecoder().decode(decryptedBytes.data);
-        console.log(JSON.parse(decryptedText));
-        setUsers(JSON.parse(decryptedText));
+        const resUsers = JSON.parse(decryptedText);
+
+        console.log(resUsers);
+        setUsers(resUsers.results);
     };
     fetchData();
-  }, []);
+  }, [userQuery]);
 
   const handlePayment = async () => {
     const token = localStorage.getItem('token');
@@ -100,6 +116,11 @@ const MakePayment: React.FC = () => {
     }
   };
 
+  const handleAutocompleteChange = (_event: any, newValue: any) => {
+    setUserQuery(newValue ? newValue.full_name : '');
+    setIban(newValue ? newValue.iban : '');
+  };
+
   return (
     <Container>
       <Paper elevation={3} sx={{ padding: '2em', margin: '2em 0' }}>
@@ -107,6 +128,31 @@ const MakePayment: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Make Payment
         </Typography>
+
+        <Autocomplete
+          options={users}
+          getOptionLabel={(user) => user.full_name}
+          onChange={handleAutocompleteChange}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Search User"
+              variant="outlined"
+              value={userQuery}
+              onChange={(e) => setUserQuery(e.target.value)}
+              fullWidth
+              InputProps={{
+                ...params.InputProps,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ mb: 2 }}
+            />
+          )}
+        />
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', margin: '1em 0' }}>
           <TextField
@@ -129,7 +175,7 @@ const MakePayment: React.FC = () => {
           Send Payment
         </Button>
 
-        {users.length > 0 && (
+        {/* {users.length > 0 && (
           <Table sx={{ mt: 3 }}>
             <TableHead>
               <TableRow>
@@ -148,7 +194,7 @@ const MakePayment: React.FC = () => {
               ))}
             </TableBody>
           </Table>
-        )}
+        )} */}
         <Box display="flex" justifyContent="center" sx={{ mt: 3 }}>
             <Link to="/internetbanking" style={{ textDecoration: 'none' }}>
                 <Button

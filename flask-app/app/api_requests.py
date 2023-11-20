@@ -535,7 +535,8 @@ def get_user_by_name():
         return jsonify(error), status
 
     user_id = data.get('user_id')
-    full_name = data.get('query')
+    full_name = request.get_json().get('query')
+    print(full_name, flush=True)
     user = User.query.get(user_id)
     if not user:
         return jsonify({'message': 'User not found'}), 404
@@ -544,16 +545,20 @@ def get_user_by_name():
         return jsonify({'message': 'RSA public key not found'}), 404
 
     users_found = User.query.filter(func.concat(User.firstname, ' ', User.lastname).ilike(f"%{full_name}%")).all()
+    print(users_found, flush=True)
     response_users_found = {
         'results': []
     }
-    for user in users_found:
+    for _user in users_found:
         user_dict = dict()
-        user_dict["full_name"] = f'{user.firstname} {user.lastname}'
-        user_dict["iban"] = user.iban
+        user_dict["full_name"] = f'{_user.firstname} {_user.lastname}'
+        user_dict["iban"] = _user.iban
         response_users_found['results'].append(user_dict)
+    print(response_users_found, flush=True)
+
+    print(user.rsa_public_key, flush=True)
 
     rsa_public_key = user.rsa_public_key.encode('utf-8')
-    resposne = encode_response(rsa_public_key, jsonify(response_users_found))
+    resposne = encode_response(rsa_public_key, response_users_found)
 
     return resposne, 200
