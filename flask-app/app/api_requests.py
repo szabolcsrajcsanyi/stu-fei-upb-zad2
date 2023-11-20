@@ -10,6 +10,7 @@ from database_model import Customer, Transaction, User
 from cipher import encrypt
 from extensions import db, cache
 from functions import check_integrity, check_password_strength, validate_jwt, salted_hash, check_salted_hash, encode_response, generate_unique_iban
+from sqlalchemy import func
 
 
 api = Blueprint('api', __name__)
@@ -531,19 +532,18 @@ def get_user_by_name():
     token = request.headers.get('Authorization').split(" ")[1]
     data, error, status = validate_jwt(token)
     if error:
-        return error, status
+        return jsonify(error), status
 
     user_id = data.get('user_id')
     full_name = data.get('query')
     user = User.query.get(user_id)
     if not user:
         return jsonify({'message': 'User not found'}), 404
-    if not full_name:
-        return jsonify({'message': 'Query not found'}), 404
 
     if not user.rsa_public_key:
         return jsonify({'message': 'RSA public key not found'}), 404
-    users_found = User.query.filter(or_((User.firstname + ' ' + User.lastname).like(f"%{full_name}%"))).all()
+
+    users_found = User.query.filter(func.concat(User.firstname, ' ', User.lastname).ilike(f"%{full_name}%")).all()
     response_users_found = {
         'results': []
     }
