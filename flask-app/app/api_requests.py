@@ -3,6 +3,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from base64 import b64encode
 from sqlalchemy.orm import aliased
+from sqlalchemy import or_
 from io import BytesIO
 from flask import current_app as app, Blueprint, jsonify, request
 from database_model import Customer, Transaction, User
@@ -523,3 +524,36 @@ def user_transactions():
     response_json = encode_response(rsa_public_key, trans_list)
 
     return response_json, 200
+
+
+@api.route('/auth/get_by_name', methods=['POST'])
+def get_user_by_name():
+    token = request.headers.get('Authorization').split(" ")[1]
+    data, error, status = validate_jwt(token)
+    if error:
+        return error, status
+
+    user_id = data.get('user_id')
+    full_name = data.get('query')
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    if not full_name:
+        return jsonify({'message': 'Query not found'}), 404
+
+    if not user.rsa_public_key:
+        return jsonify({'message': 'RSA public key not found'}), 404
+    users_found = User.query.filter(or_(User.firstname.like(f"%{full_name}%"), User.lastname.like(f"%{full_name}%"))).all()
+    response_users_found = {
+        'results': []
+    }
+    for user in users_found:
+        user_dict = dict()
+        user_dict["full_name"] = f'{user.firstname} {user.lastname}'
+        user_dict["iban"] = user.iban
+        response_users_found['results'].append(user_dict)
+
+    rsa_public_key = user.rsa_public_key.encode('utf-8')
+    resposne = encode_response(rsa_public_key, jsonify(response_users_found))
+
+    return resposne, 200
